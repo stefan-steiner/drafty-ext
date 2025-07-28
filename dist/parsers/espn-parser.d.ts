@@ -1,4 +1,4 @@
-import { PlayerRow, SiteParser, PlayerData } from '../types';
+import { SiteParser, PlayerRow, PlayerData } from '../types';
 export declare class ESPNPlayerRow implements PlayerRow {
     root: HTMLElement;
     constructor(root: HTMLElement);
@@ -11,6 +11,5 @@ export declare class ESPNParser implements SiteParser {
     name: string;
     canParse(url: string): boolean;
     getPlayerRows(): PlayerRow[];
-    private processGrid;
     getPlayerData(playerName: string): Promise<PlayerData | null>;
 }

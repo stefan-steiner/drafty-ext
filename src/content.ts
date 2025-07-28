@@ -1,15 +1,19 @@
 import { ApiService } from './services/api';
 import { StorageService } from './services/storage';
+import { ParserManager } from './parsers/parser-manager';
+import { PlayerRow } from './types';
 
 class ContentScript {
   private apiService: ApiService;
   private storageService: StorageService;
+  private parserManager: ParserManager;
   private observer: MutationObserver | null = null;
   private isInitialized = false;
 
   constructor() {
     this.apiService = ApiService.getInstance();
     this.storageService = StorageService.getInstance();
+    this.parserManager = ParserManager.getInstance();
   }
 
   async init(): Promise<void> {
@@ -56,73 +60,19 @@ class ContentScript {
   }
 
   private addButtonsToAllRows(): void {
-    // Only target the first .draft-players section (Players tab)
-    const playersSection = document.querySelector<HTMLElement>('.draft-players');
+    const currentUrl = window.location.href;
+    const playerRows = this.parserManager.getPlayerRows(currentUrl);
     
-    if (!playersSection) {
-      return; // No players section found
-    }
-    
-    // Find player name elements only within the players section
-    const playerNameElements = playersSection.querySelectorAll<HTMLElement>('.playerinfo__playername');
-    
-    playerNameElements.forEach((element, index) => {
-      if (!element.closest('.player-details')?.querySelector('.drafty-action-btn')) {
-        this.addButtonToElement(element, index);
-      }
+    playerRows.forEach((playerRow: PlayerRow) => {
+      // Add action button to each player row
+      playerRow.addActionButton(() => {
+        this.handlePlayerClick(playerRow);
+      });
     });
   }
 
-  private addButtonToElement(element: HTMLElement, index: number): void {
-    const button = document.createElement('button');
-    button.className = 'drafty-action-btn';
-    button.textContent = '📊';
-    button.title = 'Get player insights';
-    button.style.cssText = `
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      padding: 2px 6px;
-      font-size: 12px;
-      cursor: pointer;
-      margin-left: 8px;
-      transition: background-color 0.2s;
-      display: inline-block;
-      vertical-align: middle;
-    `;
-
-    button.addEventListener('mouseenter', () => {
-      button.style.background = '#0056b3';
-    });
-
-    button.addEventListener('mouseleave', () => {
-      button.style.background = '#007bff';
-    });
-
-    button.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.handleElementClick(element);
-    });
-
-    // Find the flex container that holds the player name
-    const flexContainer = element.closest('.flex');
-    
-    if (flexContainer && !flexContainer.querySelector('.drafty-action-btn')) {
-      // Insert the button after the player name span within the flex container
-      flexContainer.appendChild(button);
-    } else {
-      // Fallback: if we can't find the flex container, insert after the element itself
-      const parent = element.parentElement;
-      if (parent && !parent.querySelector('.drafty-action-btn')) {
-        parent.insertBefore(button, element.nextSibling);
-      }
-    }
-  }
-
-  private async handleElementClick(element: HTMLElement): Promise<void> {
-    const playerName = this.extractPlayerNameFromElement(element);
+  private async handlePlayerClick(playerRow: PlayerRow): Promise<void> {
+    const playerName = playerRow.getName();
     
     if (!playerName) {
       this.showError('Could not find player name');
@@ -139,7 +89,7 @@ class ContentScript {
       const response = await this.apiService.getPlayerDataByName(playerName);
       
       if (response.success && response.data) {
-        this.showPlayerData(element, playerName, response.data);
+        this.showPlayerData(playerRow.root, playerName, response.data);
       } else {
         this.showError(`Failed to get data for ${playerName}: ${response.error}`);
       }
@@ -147,20 +97,6 @@ class ContentScript {
       console.error('Error handling player action:', error);
       this.showError('An error occurred while fetching player data');
     }
-  }
-
-  private extractPlayerNameFromElement(element: HTMLElement): string {
-    // Clone the element to avoid modifying the original DOM
-    const clonedElement = element.cloneNode(true) as HTMLElement;
-    
-    // Remove any existing buttons from the clone
-    const buttons = clonedElement.querySelectorAll('.drafty-action-btn');
-    buttons.forEach(btn => btn.remove());
-    
-    // Get clean text content
-    const text = clonedElement.textContent?.trim() || '';
-    
-    return text;
   }
 
   private showPlayerData(element: HTMLElement, playerName: string, data: any): void {

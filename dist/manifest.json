@@ -22,6 +22,12 @@
       "run_at": "document_end"
     }
   ],
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/*"],
+      "matches": ["https://fantasy.espn.com/*"]
+    }
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_title": "Drafty"
