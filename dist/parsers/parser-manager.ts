@@ -1,5 +1,6 @@
 import { SiteParser, PlayerRow } from '../types';
 import { ESPNParser } from './espn-parser';
+import { BaseParser } from './base-parser';
 
 export class ParserManager {
   private static instance: ParserManager;

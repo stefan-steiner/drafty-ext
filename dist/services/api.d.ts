@@ -18,5 +18,6 @@ export declare class ApiService {
     }>>;
     logout(): Promise<ApiResponse<void>>;
     getPlayerDataByName(playerName: string): Promise<ApiResponse<PlayerData>>;
+    getBulkPlayerData(playerNames: string[]): Promise<ApiResponse<any>>;
     getCurrentUser(): Promise<ApiResponse<User>>;
 }

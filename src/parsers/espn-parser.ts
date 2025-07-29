@@ -1,58 +1,39 @@
 import { SiteParser, PlayerRow, PlayerData } from '../types';
+import { BaseParser } from './base-parser';
+
+// ESPN-specific constants
+const PLAYER_NAME_SELECTOR = '.playerinfo__playername';
 
 export class ESPNPlayerRow implements PlayerRow {
   constructor(public root: HTMLElement) {}
 
-  private nameSelectors = [
-    '.playerinfo__playername',
-    '.player-name',
-    '[data-testid="player-name"]'
-  ];
-
   getName(): string {
-    // Try to find the player name using various selectors
-    for (const selector of this.nameSelectors) {
-      const nameElement = this.root.querySelector<HTMLElement>(selector);
-      if (nameElement) {
-        // Clone the element to avoid modifying the original DOM
-        const clonedElement = nameElement.cloneNode(true) as HTMLElement;
-        
-        // Remove any existing buttons from the clone
-        const buttons = clonedElement.querySelectorAll('.drafty-action-btn');
-        buttons.forEach(btn => btn.remove());
-        
-        // Get clean text content
-        const text = clonedElement.textContent?.trim() || '';
-        if (text) {
-          return text;
-        }
-      }
+    const nameElement = this.root.querySelector<HTMLElement>(PLAYER_NAME_SELECTOR);
+    if (!nameElement) {
+      return '';
     }
     
-    // Fallback: try to get text from the entire row
-    const clonedRoot = this.root.cloneNode(true) as HTMLElement;
-    const buttons = clonedRoot.querySelectorAll('.drafty-action-btn');
+    // Clone the element to avoid modifying the original DOM
+    const clonedElement = nameElement.cloneNode(true) as HTMLElement;
+    
+    // Remove any existing buttons from the clone
+    const buttons = clonedElement.querySelectorAll('.drafty-action-btn');
     buttons.forEach(btn => btn.remove());
     
-    return clonedRoot.textContent?.trim() || '';
+    return clonedElement.textContent?.trim() || '';
   }
 
   setNote(note: string) {
-    // ESPN-specific note setting logic could go here
     console.log(`Setting note for ${this.getName()}: ${note}`);
   }
 
   addActionButton(callback: () => void): void {
-    // Check if button already exists in this specific row
+    // Check if button already exists
     if (this.root.querySelector('.drafty-action-btn')) {
       return;
     }
 
-    // Find the name cell first (ESPN-specific)
-    const nameElement = this.nameSelectors
-      .map(sel => this.root.querySelector<HTMLElement>(sel))
-      .find(Boolean);
-    
+    const nameElement = this.root.querySelector<HTMLElement>(PLAYER_NAME_SELECTOR);
     if (!nameElement) {
       return;
     }
@@ -63,8 +44,6 @@ export class ESPNPlayerRow implements PlayerRow {
     
     // Load SVG from file
     const svgUrl = chrome.runtime.getURL('assets/drafty_logo_d.svg');
-    
-    // Create an img element to load the SVG
     const img = document.createElement('img');
     img.src = svgUrl;
     img.style.cssText = `
@@ -107,14 +86,11 @@ export class ESPNPlayerRow implements PlayerRow {
       callback();
     });
 
-    // ESPN-specific button placement logic
+    // Place button in the flex container or next to the name element
     const flexContainer = nameElement.closest('.flex');
-    
     if (flexContainer && !flexContainer.querySelector('.drafty-action-btn')) {
-      // Insert the button after the player name span within the flex container
       flexContainer.appendChild(button);
     } else {
-      // Fallback: if we can't find the flex container, insert after the element itself
       const parent = nameElement.parentElement;
       if (parent && !parent.querySelector('.drafty-action-btn')) {
         parent.insertBefore(button, nameElement.nextSibling);
@@ -123,7 +99,7 @@ export class ESPNPlayerRow implements PlayerRow {
   }
 }
 
-export class ESPNParser implements SiteParser {
+export class ESPNParser extends BaseParser {
   name = 'ESPN';
 
   canParse(url: string): boolean {
@@ -131,41 +107,243 @@ export class ESPNParser implements SiteParser {
   }
 
   getPlayerRows(): PlayerRow[] {
-    // Only target the first .draft-players section (Players tab) - ESPN-specific
     const playersSection = document.querySelector<HTMLElement>('.draft-players');
-    
     if (!playersSection) {
-      return []; // No players section found
-    }
-    
-    // Find player rows within the players section - ESPN-specific
-    const playerRows = playersSection.querySelectorAll<HTMLElement>('[role="row"]');
-    
-    if (playerRows.length === 0) {
-      // Try alternative row selectors for ESPN
-      const alternativeRowSelectors = [
-        'tr',
-        '[class*="row"]',
-        '[class*="player"]',
-        'div[class*="row"]'
-      ];
-      
-      for (const selector of alternativeRowSelectors) {
-        const altRows = playersSection.querySelectorAll<HTMLElement>(selector);
-        if (altRows.length > 0) {
-          return Array.from(altRows).map(row => new ESPNPlayerRow(row));
-        }
-      }
-      
       return [];
     }
+    
+    // Find all player name elements
+    const playerNameElements = playersSection.querySelectorAll<HTMLElement>(PLAYER_NAME_SELECTOR);
+    if (playerNameElements.length === 0) {
+      return [];
+    }
+    
+    // Get unique row elements that contain player names
+    const playerRows = new Set<HTMLElement>();
+    
+    playerNameElements.forEach(nameElement => {
+      const rowElement = nameElement.closest('[role="row"]') || 
+                        nameElement.closest('tr') || 
+                        nameElement.closest('[class*="row"]') ||
+                        nameElement.closest('div[class*="row"]');
+      
+      if (rowElement) {
+        playerRows.add(rowElement as HTMLElement);
+      }
+    });
     
     return Array.from(playerRows).map(row => new ESPNPlayerRow(row));
   }
 
   async getPlayerData(playerName: string): Promise<PlayerData | null> {
-    // ESPN-specific player data fetching logic could go here
-    // For now, return null as the main API service handles this
     return null;
+  }
+
+  private createLoadingOverlay(): HTMLElement {
+    const overlay = document.createElement('div');
+    overlay.id = 'drafty-loading-overlay';
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 2147483647;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+      user-select: none;
+    `;
+    
+    // Add loading spinner
+    const spinner = document.createElement('div');
+    spinner.style.cssText = `
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-top: 4px solid #87CEEB;
+      border-radius: 50%;
+      animation: drafty-spin 1s linear infinite;
+    `;
+    
+    // Add loading text
+    const text = document.createElement('div');
+    text.textContent = 'Loading players...';
+    text.style.cssText = `
+      color: white;
+      margin-top: 20px;
+      font-family: Arial, sans-serif;
+      font-size: 16px;
+    `;
+    
+    // Add CSS animation
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes drafty-spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    const container = document.createElement('div');
+    container.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    `;
+    
+    container.appendChild(spinner);
+    container.appendChild(text);
+    overlay.appendChild(container);
+    
+    // Prevent ALL events
+    const preventEvent = (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      return false;
+    };
+    
+    // Block all possible events
+    const events = [
+      'mousedown', 'mouseup', 'mousemove', 'click', 'dblclick', 'contextmenu',
+      'wheel', 'scroll', 'keydown', 'keyup', 'keypress', 'touchstart', 'touchend',
+      'touchmove', 'dragstart', 'drag', 'dragend', 'drop', 'focus', 'blur',
+      'input', 'change', 'submit', 'reset', 'select', 'selectstart'
+    ];
+    
+    events.forEach(eventType => {
+      overlay.addEventListener(eventType, preventEvent, { capture: true, passive: false });
+    });
+    
+    return overlay;
+  }
+
+  private removeLoadingOverlay(): void {
+    const overlay = document.getElementById('drafty-loading-overlay');
+    if (overlay) {
+      overlay.remove();
+    }
+    
+    // Remove the style element we added
+    const style = document.querySelector('style');
+    if (style && style.textContent?.includes('drafty-spin')) {
+      style.remove();
+    }
+  }
+
+  async scrollForMorePlayers(): Promise<boolean> {
+    // First find the players section to scope our search
+    const playersSection = document.querySelector<HTMLElement>('.draft-players');
+    if (!playersSection) {
+      console.error('ESPN Parser: Could not find players section');
+      return false;
+    }
+    
+    // Try to find the scrollbar element specifically within the players section
+    const scrollbarElement = playersSection.querySelector<HTMLElement>('.ScrollbarLayout_main.ScrollbarLayout_mainVertical.public_Scrollbar_main');
+    
+    if (!scrollbarElement) {
+      console.error('ESPN Parser: Could not find scrollbar element within players section');
+      return false;
+    }
+    
+    console.log('ESPN Parser: Found scrollbar element, attempting scroll...');
+    
+    // Create and add loading overlay
+    const loadingOverlay = this.createLoadingOverlay();
+    document.body.appendChild(loadingOverlay);
+    
+    try {
+      // Wait a moment for the overlay to be fully rendered
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Simulate a small mouse drag operation on the scrollbar
+      const rect = scrollbarElement.getBoundingClientRect();
+      const startY = rect.top + rect.height * 0.4; // Start at 40% down the scrollbar
+      const endY = startY + 5; // Move just 5 pixels down
+      const x = rect.left + rect.width / 2; // Middle horizontally
+      
+      // Mouse down event
+      const mouseDownEvent = new MouseEvent('mousedown', {
+        clientX: x,
+        clientY: startY,
+        bubbles: true,
+        cancelable: true,
+        button: 0
+      });
+      
+      // Mouse move event (small drag)
+      const mouseMoveEvent = new MouseEvent('mousemove', {
+        clientX: x,
+        clientY: endY,
+        bubbles: true,
+        cancelable: true
+      });
+      
+      // Mouse up event
+      const mouseUpEvent = new MouseEvent('mouseup', {
+        clientX: x,
+        clientY: endY,
+        bubbles: true,
+        cancelable: true,
+        button: 0
+      });
+      
+      // Execute the drag sequence
+      scrollbarElement.dispatchEvent(mouseDownEvent);
+      await new Promise(resolve => setTimeout(resolve, 50));
+      scrollbarElement.dispatchEvent(mouseMoveEvent);
+      await new Promise(resolve => setTimeout(resolve, 50));
+      scrollbarElement.dispatchEvent(mouseUpEvent);
+      await new Promise(resolve => setTimeout(resolve, 300)); // Wait for scroll to complete
+      
+      return true; // Always return true since we attempted the scroll
+    } finally {
+      // Always remove the loading overlay when done
+      this.removeLoadingOverlay();
+    }
+  }
+
+  async getPlayerNames(requiredCount: number): Promise<string[]> {
+    console.log(`ESPN Parser: Attempting to get ${requiredCount} player names`);
+    
+    const playerNames = new Set<string>();
+    let attempts = 0;
+    const maxAttempts = 50; // Prevent infinite loops
+    
+    while (attempts < maxAttempts && playerNames.size < requiredCount) {
+      // Get all player rows currently in the DOM
+      const currentPlayerRows = this.getPlayerRows();
+      
+      // Update the set with player names
+      for (const playerRow of currentPlayerRows) {
+        const name = playerRow.getName().trim();
+        if (name) {
+          playerNames.add(name);
+        }
+      }
+      
+      console.log(`ESPN Parser: Found ${playerNames.size} unique player names (needed ${requiredCount})`);
+      
+      // If we have enough players, break
+      if (playerNames.size >= requiredCount) {
+        break;
+      }
+      
+      // Scroll for more players
+      await this.scrollForMorePlayers();
+      
+      attempts++;
+      console.log(`ESPN Parser: Scroll attempt ${attempts}/${maxAttempts}`);
+    }
+    
+    console.log(`ESPN Parser: Final collection: ${playerNames.size} player names`);
+    
+    // Convert set to array and return
+    return Array.from(playerNames);
   }
 } 

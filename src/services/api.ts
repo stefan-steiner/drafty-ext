@@ -147,6 +147,13 @@ export class ApiService {
     return this.makeRequest<PlayerData>(`/players/data/${encodeURIComponent(playerName)}/`);
   }
 
+  async getBulkPlayerData(playerNames: string[]): Promise<ApiResponse<any>> {
+    return this.makeRequest<any>('/players/bulk-data/', {
+      method: 'POST',
+      body: JSON.stringify({ player_names: playerNames }),
+    });
+  }
+
   // User profile methods
   async getCurrentUser(): Promise<ApiResponse<User>> {
     const response = await this.makeRequest<{
