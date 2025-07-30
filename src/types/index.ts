@@ -45,7 +45,8 @@ export interface SiteParser {
   name: string;
   canParse(url: string): boolean;
   getPlayerRows(): PlayerRow[];
-  getPlayerNames(requiredCount: number): Promise<string[]>;
+  getAvailableNames(requiredCount: number): Promise<string[]>;
+  getDraftedNames(): Promise<string[]>;
 }
 
 // Storage keys

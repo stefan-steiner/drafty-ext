@@ -1,4 +1,5 @@
-import { AuthToken, User, PlayerData, ApiResponse } from '../types';
+import { AuthToken, User } from '../types';
+import { PlayerData, PickAssistantResponse, PickAssistantRequest, ApiResponse, ScoringType } from '../types/api';
 export declare class ApiService {
     private static instance;
     private authToken;
@@ -17,7 +18,7 @@ export declare class ApiService {
         user: User;
     }>>;
     logout(): Promise<ApiResponse<void>>;
-    getPlayerDataByName(playerName: string): Promise<ApiResponse<PlayerData>>;
-    getBulkPlayerData(playerNames: string[]): Promise<ApiResponse<any>>;
+    getPlayerDataByName(playerName: string, scoringType?: ScoringType): Promise<ApiResponse<PlayerData>>;
+    pickAssistant(request: PickAssistantRequest): Promise<ApiResponse<PickAssistantResponse>>;
     getCurrentUser(): Promise<ApiResponse<User>>;
 }

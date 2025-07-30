@@ -1,4 +1,12 @@
-import { AuthToken, User, PlayerData, ApiResponse } from '../types';
+import { AuthToken, User } from '../types';
+import { 
+  PlayerData, 
+  PickAssistantResponse, 
+  PickAssistantRequest, 
+  ApiResponse, 
+  ApiError,
+  ScoringType 
+} from '../types/api';
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
@@ -143,14 +151,14 @@ export class ApiService {
   }
 
   // Player data methods
-  async getPlayerDataByName(playerName: string): Promise<ApiResponse<PlayerData>> {
-    return this.makeRequest<PlayerData>(`/players/data/${encodeURIComponent(playerName)}/`);
+  async getPlayerDataByName(playerName: string, scoringType: ScoringType = 'standard'): Promise<ApiResponse<PlayerData>> {
+    return this.makeRequest<PlayerData>(`/players/data/${encodeURIComponent(playerName)}/?scoring_type=${scoringType}`);
   }
 
-  async getBulkPlayerData(playerNames: string[]): Promise<ApiResponse<any>> {
-    return this.makeRequest<any>('/players/bulk-data/', {
+  async pickAssistant(request: PickAssistantRequest): Promise<ApiResponse<PickAssistantResponse>> {
+    return this.makeRequest<PickAssistantResponse>('/players/pick-assistant/', {
       method: 'POST',
-      body: JSON.stringify({ player_names: playerNames }),
+      body: JSON.stringify(request),
     });
   }
 

@@ -2,6 +2,7 @@ import { ApiService } from './services/api';
 import { StorageService } from './services/storage';
 import { ParserManager } from './parsers/parser-manager';
 import { PlayerRow } from './types';
+import { PlayerData, PickAssistantResponse } from './types/api';
 
 class ContentScript {
   private apiService: ApiService;
@@ -80,7 +81,7 @@ class ContentScript {
         return;
       }
 
-      const response = await this.apiService.getPlayerDataByName(playerName);
+      const response = await this.apiService.getPlayerDataByName(playerName, 'standard');
       
       if (response.success && response.data) {
         this.showPlayerData(playerRow.root, playerName, response.data);
@@ -93,7 +94,7 @@ class ContentScript {
     }
   }
 
-  private showPlayerData(element: HTMLElement, playerName: string, data: any): void {
+  private showPlayerData(element: HTMLElement, playerName: string, data: PlayerData): void {
     // Remove any existing popup
     const existingPopup = document.querySelector('.drafty-popup');
     if (existingPopup) {
@@ -116,14 +117,14 @@ class ContentScript {
       font-family: Arial, sans-serif;
       font-size: 14px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-      max-width: 400px;
+      max-width: 500px;
       max-height: 80vh;
       overflow-y: auto;
     `;
 
     // Create popup content
     const title = document.createElement('h3');
-    title.textContent = `${playerName} - Player Insights`;
+    title.textContent = `${data.full_name || playerName} - Player Insights`;
     title.style.cssText = `
       margin: 0 0 15px 0;
       color: #333;
@@ -134,41 +135,72 @@ class ContentScript {
 
     const content = document.createElement('div');
     
-    // Add rank information
-    if (data.rank) {
-      const rankDiv = document.createElement('div');
-      rankDiv.style.cssText = 'margin-bottom: 10px;';
-      rankDiv.innerHTML = `<strong>Rank:</strong> ${data.rank}`;
-      content.appendChild(rankDiv);
+    // Add basic player info
+    const basicInfo = document.createElement('div');
+    basicInfo.style.cssText = 'margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px;';
+    
+    let basicInfoHtml = '';
+    if (data.position) basicInfoHtml += `<strong>Position:</strong> ${data.position}<br>`;
+    if (data.team) basicInfoHtml += `<strong>Team:</strong> ${data.team}<br>`;
+    if (data.rank) basicInfoHtml += `<strong>Rank:</strong> ${data.rank}<br>`;
+    if (data.adp) basicInfoHtml += `<strong>ADP:</strong> ${data.adp}<br>`;
+    
+    basicInfo.innerHTML = basicInfoHtml;
+    content.appendChild(basicInfo);
+
+    // Add player overview
+    if (data.player_overview) {
+      const overviewDiv = document.createElement('div');
+      overviewDiv.style.cssText = 'margin-bottom: 15px;';
+      overviewDiv.innerHTML = `<strong>Overview:</strong><br>${data.player_overview}`;
+      content.appendChild(overviewDiv);
     }
 
-    // Add insights
-    const insights = data.insights || [];
-    if (insights.length > 0) {
-      const insightsDiv = document.createElement('div');
-      insightsDiv.style.cssText = 'margin-bottom: 10px;';
-      insightsDiv.innerHTML = `<strong>Insights:</strong>`;
-      
-      const insightsList = document.createElement('ul');
-      insightsList.style.cssText = 'margin: 5px 0 0 20px; padding: 0;';
-      
-      insights.forEach((insight: any) => {
-        const li = document.createElement('li');
-        li.textContent = insight.message || insight;
-        li.style.cssText = 'margin-bottom: 5px;';
-        insightsList.appendChild(li);
-      });
-      
-      insightsDiv.appendChild(insightsList);
-      content.appendChild(insightsDiv);
+    // Add team expectations
+    if (data.team_expectations) {
+      const expectationsDiv = document.createElement('div');
+      expectationsDiv.style.cssText = 'margin-bottom: 15px;';
+      expectationsDiv.innerHTML = `<strong>Team Expectations:</strong><br>${data.team_expectations}`;
+      content.appendChild(expectationsDiv);
     }
 
-    // Add any additional data
-    if (data.additionalData) {
-      const additionalDiv = document.createElement('div');
-      additionalDiv.style.cssText = 'margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;';
-      additionalDiv.innerHTML = `<strong>Additional Data:</strong><br>${JSON.stringify(data.additionalData, null, 2)}`;
-      content.appendChild(additionalDiv);
+    // Add depth chart role
+    if (data.depth_chart_role) {
+      const depthChartDiv = document.createElement('div');
+      depthChartDiv.style.cssText = 'margin-bottom: 15px;';
+      depthChartDiv.innerHTML = `<strong>Depth Chart Role:</strong><br>${data.depth_chart_role}`;
+      content.appendChild(depthChartDiv);
+    }
+
+    // Add upside
+    if (data.upside) {
+      const upsideDiv = document.createElement('div');
+      upsideDiv.style.cssText = 'margin-bottom: 15px; padding: 10px; background: #d4edda; border-left: 4px solid #28a745; border-radius: 4px;';
+      upsideDiv.innerHTML = `<strong>Upside:</strong><br>${data.upside}`;
+      content.appendChild(upsideDiv);
+    }
+
+    // Add downside
+    if (data.downside) {
+      const downsideDiv = document.createElement('div');
+      downsideDiv.style.cssText = 'margin-bottom: 15px; padding: 10px; background: #f8d7da; border-left: 4px solid #dc3545; border-radius: 4px;';
+      downsideDiv.innerHTML = `<strong>Downside:</strong><br>${data.downside}`;
+      content.appendChild(downsideDiv);
+    }
+
+    // Add sources if available
+    const sources = [];
+    if (data.player_overview_sources) sources.push(`Overview: ${data.player_overview_sources}`);
+    if (data.team_expectations_sources) sources.push(`Team Expectations: ${data.team_expectations_sources}`);
+    if (data.depth_chart_role_sources) sources.push(`Depth Chart: ${data.depth_chart_role_sources}`);
+    if (data.upside_sources) sources.push(`Upside: ${data.upside_sources}`);
+    if (data.downside_sources) sources.push(`Downside: ${data.downside_sources}`);
+
+    if (sources.length > 0) {
+      const sourcesDiv = document.createElement('div');
+      sourcesDiv.style.cssText = 'margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; font-size: 12px; color: #666;';
+      sourcesDiv.innerHTML = `<strong>Sources:</strong><br>${sources.join('<br>')}`;
+      content.appendChild(sourcesDiv);
     }
 
     // Create close button
@@ -303,7 +335,7 @@ class ContentScript {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z" fill="currentColor"/>
         </svg>
-        <span>Get Top 25</span>
+        <span>Pick Assistant</span>
       </div>
     `;
 
@@ -423,13 +455,16 @@ class ContentScript {
       }
       
       console.log('🔍 Starting to collect players...');
-      const playerNames = await parser.getPlayerNames(100);
-      console.log(`📊 Found ${playerNames.length} player names`);
+      const availableNames = await parser.getAvailableNames(25);
+      const draftedNames = await parser.getDraftedNames();
+      
+      console.log(`📊 Found ${availableNames.length} available player names`);
+      console.log(`📊 Found ${draftedNames.length} drafted player names`);
       
       // Remove the first loading overlay
       this.hideLoadingOverlay();
       
-      if (playerNames.length === 0) {
+      if (availableNames.length === 0) {
         console.log('❌ No players found on this page');
         this.showError('No players found on this page');
         return;
@@ -439,8 +474,12 @@ class ContentScript {
       this.showLoadingOverlay('Analyzing possible picks');
       
       // Step 8: Call backend API
-      console.log('🌐 Calling API with player names:', playerNames);
-      const response = await this.apiService.getBulkPlayerData(playerNames);
+      console.log('🌐 Calling API with available names and drafted names:', availableNames, draftedNames);
+      const response = await this.apiService.pickAssistant({
+        players_available: availableNames,
+        players_drafted: draftedNames,
+        scoring_type: 'standard' // You can make this configurable later
+      });
       
       console.log('📡 API response received:', response);
       
@@ -448,8 +487,8 @@ class ContentScript {
       this.hideLoadingOverlay();
       
       if (response.success && response.data) {
-        console.log('✅ API call successful, showing bulk player data');
-        this.showBulkPlayerData(playerNames, response.data);
+        console.log('✅ API call successful, showing pick assistant data');
+        this.showPickAssistant(response.data);
       } else {
         console.log('❌ API call failed:', response.error);
         this.showError(`Failed to get player data: ${response.error}`);
@@ -560,7 +599,7 @@ class ContentScript {
     }
   }
 
-  private showBulkPlayerData(playerNames: string[], data: any): void {
+  private showPickAssistant(data: PickAssistantResponse): void {
     // Remove any existing popup
     const existingPopup = document.querySelector('.drafty-bulk-popup');
     if (existingPopup) {
@@ -590,7 +629,7 @@ class ContentScript {
 
     // Create popup content
     const title = document.createElement('h3');
-    title.textContent = `Top ${playerNames.length} Players - Insights`;
+    title.textContent = `Pick Assistant - Recommendations`;
     title.style.cssText = `
       margin: 0 0 20px 0;
       color: #333;
@@ -601,73 +640,78 @@ class ContentScript {
 
     const content = document.createElement('div');
     
-    // Handle API response data
-    const players = data.players || [];
+    // Handle pick assistant response data
+    const options = [
+      { key: 'option1', data: data.option1 },
+      { key: 'option2', data: data.option2 },
+      { key: 'option3', data: data.option3 }
+    ];
+    let hasValidOptions = false;
     
-    if (players.length === 0) {
-      const noDataDiv = document.createElement('div');
-      noDataDiv.style.cssText = 'text-align: center; color: #666; padding: 20px;';
-      noDataDiv.textContent = 'No player data available';
-      content.appendChild(noDataDiv);
-    } else {
-      // Display player list
-      const playerList = document.createElement('div');
-      playerList.style.cssText = 'margin-bottom: 20px;';
-      
-      players.forEach((player: any, index: number) => {
-        const playerDiv = document.createElement('div');
-        playerDiv.style.cssText = `
-          padding: 12px;
-          border: 1px solid #eee;
+    options.forEach((option, index) => {
+      if (option.data && option.data.name) {
+        hasValidOptions = true;
+        
+        const optionDiv = document.createElement('div');
+        optionDiv.style.cssText = `
+          padding: 16px;
+          border: 2px solid ${index === 0 ? '#28a745' : index === 1 ? '#ffc107' : '#17a2b8'};
           border-radius: 8px;
-          margin-bottom: 8px;
-          background: #f8f9fa;
+          margin-bottom: 12px;
+          background: ${index === 0 ? '#f8fff9' : index === 1 ? '#fffef8' : '#f8fdff'};
+          position: relative;
         `;
         
-        const playerHeader = document.createElement('div');
-        playerHeader.style.cssText = 'font-weight: 600; margin-bottom: 8px; color: #333;';
+        // Add rank badge
+        const rankBadge = document.createElement('div');
+        rankBadge.style.cssText = `
+          position: absolute;
+          top: -8px;
+          left: 16px;
+          background: ${index === 0 ? '#28a745' : index === 1 ? '#ffc107' : '#17a2b8'};
+          color: white;
+          padding: 4px 8px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 600;
+        `;
+        rankBadge.textContent = `#${index + 1}`;
+        optionDiv.appendChild(rankBadge);
         
-        if (player.error) {
-          playerHeader.textContent = `${index + 1}. ${player.name} - Not Found`;
-          playerHeader.style.color = '#dc3545';
-        } else {
-          playerHeader.textContent = `${index + 1}. ${player.full_name || player.name}`;
-          
-          // Add position and team if available
-          if (player.position || player.team) {
-            const details = document.createElement('div');
-            details.style.cssText = 'font-size: 12px; color: #666; margin-top: 4px;';
-            details.textContent = `${player.position || ''} ${player.team || ''}`.trim();
-            playerDiv.appendChild(details);
-          }
+        // Player name
+        const playerName = document.createElement('div');
+        playerName.style.cssText = `
+          font-weight: 700;
+          font-size: 16px;
+          color: #333;
+          margin-bottom: 8px;
+          margin-top: 8px;
+        `;
+        playerName.textContent = option.data.name;
+        optionDiv.appendChild(playerName);
+        
+        // Reason
+        if (option.data.reason) {
+          const reasonDiv = document.createElement('div');
+          reasonDiv.style.cssText = `
+            color: #666;
+            font-size: 14px;
+            line-height: 1.4;
+            margin-top: 8px;
+          `;
+          reasonDiv.textContent = option.data.reason;
+          optionDiv.appendChild(reasonDiv);
         }
         
-        // Add insights if available
-        if (player.insights && player.insights.length > 0) {
-          const insightsList = document.createElement('ul');
-          insightsList.style.cssText = 'margin: 8px 0 0 0; padding-left: 20px; color: #666;';
-          
-          player.insights.forEach((insight: any) => {
-            const li = document.createElement('li');
-            li.textContent = insight.message || insight;
-            li.style.cssText = 'margin-bottom: 4px;';
-            insightsList.appendChild(li);
-          });
-          
-          playerDiv.appendChild(insightsList);
-        } else if (!player.error) {
-          // Show placeholder for players without insights
-          const noInsights = document.createElement('div');
-          noInsights.style.cssText = 'font-size: 12px; color: #999; margin-top: 4px; font-style: italic;';
-          noInsights.textContent = 'No insights available';
-          playerDiv.appendChild(noInsights);
-        }
-        
-        playerDiv.appendChild(playerHeader);
-        playerList.appendChild(playerDiv);
-      });
-      
-      content.appendChild(playerList);
+        content.appendChild(optionDiv);
+      }
+    });
+    
+    if (!hasValidOptions) {
+      const noDataDiv = document.createElement('div');
+      noDataDiv.style.cssText = 'text-align: center; color: #666; padding: 20px;';
+      noDataDiv.textContent = 'No recommendations available';
+      content.appendChild(noDataDiv);
     }
 
     // Create close button

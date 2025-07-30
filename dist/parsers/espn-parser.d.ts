@@ -16,5 +16,11 @@ export declare class ESPNParser extends BaseParser {
     private scrollToTop;
     private scrollDown;
     private getCurrentPlayerNames;
-    getPlayerNames(requiredCount: number): Promise<string[]>;
+    getAvailableNames(requiredCount: number): Promise<string[]>;
+    private findDraftedRosterSection;
+    private findDraftedPlayerElements;
+    private getCurrentDraftedNames;
+    private scrollDraftedToTop;
+    private scrollDraftedDown;
+    getDraftedNames(): Promise<string[]>;
 }

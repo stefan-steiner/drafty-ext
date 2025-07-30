@@ -37,7 +37,8 @@ export interface SiteParser {
     name: string;
     canParse(url: string): boolean;
     getPlayerRows(): PlayerRow[];
-    getPlayerNames(requiredCount: number): Promise<string[]>;
+    getAvailableNames(requiredCount: number): Promise<string[]>;
+    getDraftedNames(): Promise<string[]>;
 }
 export declare const STORAGE_KEYS: {
     readonly AUTH_TOKEN: "auth_token";
