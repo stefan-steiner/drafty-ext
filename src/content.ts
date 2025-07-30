@@ -408,33 +408,44 @@ class ContentScript {
     try {
       console.log('🚀 Floating button clicked, starting player collection...');
       
-      // Show loading state
-      if (this.floatingButton) {
-        this.floatingButton.innerHTML = `
-          <div class="drafty-floating-btn-content">
-            <div class="drafty-spinner"></div>
-            <span>Loading...</span>
-          </div>
-        `;
-        this.floatingButton.style.pointerEvents = 'none';
-      }
-
-      // Collect player names
-      const playerNames = await this.collectTop25Players();
+      // Step 1: Show loading overlay for searching players
+      this.showLoadingOverlay('Searching available players');
       
-      console.log(`📋 Collected ${playerNames.length} player names for API call`);
+      // Step 2-6: Get player names using parser
+      const currentUrl = window.location.href;
+      const parser = this.parserManager.getParserForUrl(currentUrl);
+      
+      if (!parser) {
+        console.log('❌ No parser found for this URL');
+        this.hideLoadingOverlay();
+        this.showError('No parser found for this URL');
+        return;
+      }
+      
+      console.log('🔍 Starting to collect players...');
+      const playerNames = await parser.getPlayerNames(100);
+      console.log(`📊 Found ${playerNames.length} player names`);
+      
+      // Remove the first loading overlay
+      this.hideLoadingOverlay();
       
       if (playerNames.length === 0) {
         console.log('❌ No players found on this page');
         this.showError('No players found on this page');
         return;
       }
-
-      // Call API with player names
+      
+      // Step 7: Show loading overlay for analyzing picks
+      this.showLoadingOverlay('Analyzing possible picks');
+      
+      // Step 8: Call backend API
       console.log('🌐 Calling API with player names:', playerNames);
       const response = await this.apiService.getBulkPlayerData(playerNames);
       
       console.log('📡 API response received:', response);
+      
+      // Step 9: Remove loading overlay and show results
+      this.hideLoadingOverlay();
       
       if (response.success && response.data) {
         console.log('✅ API call successful, showing bulk player data');
@@ -445,42 +456,108 @@ class ContentScript {
       }
     } catch (error) {
       console.error('💥 Error handling floating button click:', error);
+      this.hideLoadingOverlay();
       this.showError('An error occurred while fetching player data');
-    } finally {
-      // Reset button state
-      if (this.floatingButton) {
-        this.floatingButton.innerHTML = `
-          <div class="drafty-floating-btn-content">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z" fill="currentColor"/>
-            </svg>
-            <span>Get Top 25</span>
-          </div>
-        `;
-        this.floatingButton.style.pointerEvents = 'auto';
-      }
     }
   }
 
-  private async collectTop25Players(): Promise<string[]> {
-    const currentUrl = window.location.href;
-    const parser = this.parserManager.getParserForUrl(currentUrl);
+  private showLoadingOverlay(message: string): void {
+    // Remove any existing overlay
+    this.hideLoadingOverlay();
     
-    if (!parser) {
-      console.log('❌ No parser found for this URL');
-      return [];
+    const overlay = document.createElement('div');
+    overlay.id = 'drafty-loading-overlay';
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 2147483647;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+      user-select: none;
+    `;
+    
+    // Add loading spinner
+    const spinner = document.createElement('div');
+    spinner.style.cssText = `
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-top: 4px solid #87CEEB;
+      border-radius: 50%;
+      animation: drafty-spin 1s linear infinite;
+    `;
+    
+    // Add loading text
+    const text = document.createElement('div');
+    text.textContent = message;
+    text.style.cssText = `
+      color: white;
+      margin-top: 20px;
+      font-family: Arial, sans-serif;
+      font-size: 16px;
+    `;
+    
+    // Add CSS animation
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes drafty-spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    const container = document.createElement('div');
+    container.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    `;
+    
+    container.appendChild(spinner);
+    container.appendChild(text);
+    overlay.appendChild(container);
+    
+    // Prevent ALL events
+    const preventEvent = (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      return false;
+    };
+    
+    // Block all possible events
+    const events = [
+      'mousedown', 'mouseup', 'mousemove', 'click', 'dblclick', 'contextmenu',
+      'wheel', 'scroll', 'keydown', 'keyup', 'keypress', 'touchstart', 'touchend',
+      'touchmove', 'dragstart', 'drag', 'dragend', 'drop', 'focus', 'blur',
+      'input', 'change', 'submit', 'reset', 'select', 'selectstart'
+    ];
+    
+    events.forEach(eventType => {
+      overlay.addEventListener(eventType, preventEvent, { capture: true, passive: false });
+    });
+    
+    document.body.appendChild(overlay);
+  }
+
+  private hideLoadingOverlay(): void {
+    const overlay = document.getElementById('drafty-loading-overlay');
+    if (overlay) {
+      overlay.remove();
     }
     
-    console.log('🔍 Starting to collect top 25 players...');
-    
-    // Use the parser's getPlayerNames method to get 100 player names
-    const playerNames = await parser.getPlayerNames(100);
-    console.log(`📊 Found ${playerNames.length} player names`);
-    
-    console.log(`🎯 Final player collection: ${playerNames.length} players found`);
-    console.log('📝 Player names:', playerNames);
-    
-    return playerNames.slice(0, 25);
+    // Remove the style element we added
+    const style = document.querySelector('style');
+    if (style && style.textContent?.includes('drafty-spin')) {
+      style.remove();
+    }
   }
 
   private showBulkPlayerData(playerNames: string[], data: any): void {

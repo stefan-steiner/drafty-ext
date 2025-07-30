@@ -135,197 +135,153 @@ export class ESPNParser extends BaseParser {
     return Array.from(playerRows).map(row => new ESPNPlayerRow(row));
   }
 
-  async getPlayerData(playerName: string): Promise<PlayerData | null> {
-    return null;
-  }
-
-  private createLoadingOverlay(): HTMLElement {
-    const overlay = document.createElement('div');
-    overlay.id = 'drafty-loading-overlay';
-    overlay.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(0, 0, 0, 0.7);
-      z-index: 2147483647;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: auto;
-      user-select: none;
-    `;
-    
-    // Add loading spinner
-    const spinner = document.createElement('div');
-    spinner.style.cssText = `
-      width: 50px;
-      height: 50px;
-      border: 4px solid rgba(255, 255, 255, 0.3);
-      border-top: 4px solid #87CEEB;
-      border-radius: 50%;
-      animation: drafty-spin 1s linear infinite;
-    `;
-    
-    // Add loading text
-    const text = document.createElement('div');
-    text.textContent = 'Loading players...';
-    text.style.cssText = `
-      color: white;
-      margin-top: 20px;
-      font-family: Arial, sans-serif;
-      font-size: 16px;
-    `;
-    
-    // Add CSS animation
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes drafty-spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-    `;
-    document.head.appendChild(style);
-    
-    const container = document.createElement('div');
-    container.style.cssText = `
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    `;
-    
-    container.appendChild(spinner);
-    container.appendChild(text);
-    overlay.appendChild(container);
-    
-    // Prevent ALL events
-    const preventEvent = (e: Event) => {
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-      return false;
-    };
-    
-    // Block all possible events
-    const events = [
-      'mousedown', 'mouseup', 'mousemove', 'click', 'dblclick', 'contextmenu',
-      'wheel', 'scroll', 'keydown', 'keyup', 'keypress', 'touchstart', 'touchend',
-      'touchmove', 'dragstart', 'drag', 'dragend', 'drop', 'focus', 'blur',
-      'input', 'change', 'submit', 'reset', 'select', 'selectstart'
-    ];
-    
-    events.forEach(eventType => {
-      overlay.addEventListener(eventType, preventEvent, { capture: true, passive: false });
-    });
-    
-    return overlay;
-  }
-
-  private removeLoadingOverlay(): void {
-    const overlay = document.getElementById('drafty-loading-overlay');
-    if (overlay) {
-      overlay.remove();
-    }
-    
-    // Remove the style element we added
-    const style = document.querySelector('style');
-    if (style && style.textContent?.includes('drafty-spin')) {
-      style.remove();
-    }
-  }
-
-  async scrollForMorePlayers(): Promise<boolean> {
-    // First find the players section to scope our search
+  private findScrollbar(): HTMLElement | null {
     const playersSection = document.querySelector<HTMLElement>('.draft-players');
     if (!playersSection) {
-      console.error('ESPN Parser: Could not find players section');
-      return false;
+      return null;
     }
     
-    // Try to find the scrollbar element specifically within the players section
-    const scrollbarElement = playersSection.querySelector<HTMLElement>('.ScrollbarLayout_main.ScrollbarLayout_mainVertical.public_Scrollbar_main');
-    
-    if (!scrollbarElement) {
-      console.error('ESPN Parser: Could not find scrollbar element within players section');
-      return false;
+    return playersSection.querySelector<HTMLElement>('.ScrollbarLayout_main.ScrollbarLayout_mainVertical.public_Scrollbar_main');
+  }
+
+  private findScrollbarFace(): HTMLElement | null {
+    const playersSection = document.querySelector<HTMLElement>('.draft-players');
+    if (!playersSection) {
+      return null;
     }
     
-    console.log('ESPN Parser: Found scrollbar element, attempting scroll...');
-    
-    // Create and add loading overlay
-    const loadingOverlay = this.createLoadingOverlay();
-    document.body.appendChild(loadingOverlay);
-    
-    try {
-      // Wait a moment for the overlay to be fully rendered
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Simulate a small mouse drag operation on the scrollbar
-      const rect = scrollbarElement.getBoundingClientRect();
-      const startY = rect.top + rect.height * 0.4; // Start at 40% down the scrollbar
-      const endY = startY + 5; // Move just 5 pixels down
-      const x = rect.left + rect.width / 2; // Middle horizontally
-      
-      // Mouse down event
-      const mouseDownEvent = new MouseEvent('mousedown', {
-        clientX: x,
-        clientY: startY,
-        bubbles: true,
-        cancelable: true,
-        button: 0
-      });
-      
-      // Mouse move event (small drag)
-      const mouseMoveEvent = new MouseEvent('mousemove', {
-        clientX: x,
-        clientY: endY,
-        bubbles: true,
-        cancelable: true
-      });
-      
-      // Mouse up event
-      const mouseUpEvent = new MouseEvent('mouseup', {
-        clientX: x,
-        clientY: endY,
-        bubbles: true,
-        cancelable: true,
-        button: 0
-      });
-      
-      // Execute the drag sequence
-      scrollbarElement.dispatchEvent(mouseDownEvent);
-      await new Promise(resolve => setTimeout(resolve, 50));
-      scrollbarElement.dispatchEvent(mouseMoveEvent);
-      await new Promise(resolve => setTimeout(resolve, 50));
-      scrollbarElement.dispatchEvent(mouseUpEvent);
-      await new Promise(resolve => setTimeout(resolve, 300)); // Wait for scroll to complete
-      
-      return true; // Always return true since we attempted the scroll
-    } finally {
-      // Always remove the loading overlay when done
-      this.removeLoadingOverlay();
+    return playersSection.querySelector<HTMLElement>('.ScrollbarLayout_face.ScrollbarLayout_faceVertical.public_Scrollbar_face');
+  }
+
+  private async scrollToTop(): Promise<void> {
+    const scrollbarFace = this.findScrollbarFace();
+    const scrollbar = this.findScrollbar();
+    if (!scrollbarFace || !scrollbar) {
+      return;
     }
+    
+    const faceRect = scrollbarFace.getBoundingClientRect();
+    const scrollbarRect = scrollbar.getBoundingClientRect();
+    
+    // Start position: center of the scrollbar face
+    const startX = faceRect.left + faceRect.width / 2;
+    const startY = faceRect.top + faceRect.height / 2;
+    
+    // End position: top of the scrollbar track (with a small offset to avoid edge)
+    const endX = scrollbarRect.left + scrollbarRect.width / 2;
+    const endY = scrollbarRect.top + 10; // 10px from the top of the scrollbar
+    
+    // Mouse down event on the scrollbar face
+    const mouseDownEvent = new MouseEvent('mousedown', {
+      clientX: startX,
+      clientY: startY,
+      bubbles: true,
+      cancelable: true,
+      button: 0
+    });
+    
+    // Mouse move event (drag to top)
+    const mouseMoveEvent = new MouseEvent('mousemove', {
+      clientX: endX,
+      clientY: endY,
+      bubbles: true,
+      cancelable: true
+    });
+    
+    // Mouse up event
+    const mouseUpEvent = new MouseEvent('mouseup', {
+      clientX: endX,
+      clientY: endY,
+      bubbles: true,
+      cancelable: true,
+      button: 0
+    });
+    
+    // Execute the drag sequence to move scrollbar face to top
+    scrollbarFace.dispatchEvent(mouseDownEvent);
+    await new Promise(resolve => setTimeout(resolve, 50));
+    scrollbarFace.dispatchEvent(mouseMoveEvent);
+    await new Promise(resolve => setTimeout(resolve, 50));
+    scrollbarFace.dispatchEvent(mouseUpEvent);
+  }
+
+  private async scrollDown(): Promise<void> {
+    const scrollbarFace = this.findScrollbarFace();
+    if (!scrollbarFace) {
+      return;
+    }
+    
+    const rect = scrollbarFace.getBoundingClientRect();
+    const startY = rect.top + rect.height / 2;
+    const endY = startY + 10; // Move 10 pixels down
+    const x = rect.left + rect.width / 2;
+    
+    // Mouse down event on the scrollbar face
+    const mouseDownEvent = new MouseEvent('mousedown', {
+      clientX: x,
+      clientY: startY,
+      bubbles: true,
+      cancelable: true,
+      button: 0
+    });
+    
+    // Mouse move event (small drag)
+    const mouseMoveEvent = new MouseEvent('mousemove', {
+      clientX: x,
+      clientY: endY,
+      bubbles: true,
+      cancelable: true
+    });
+    
+    // Mouse up event
+    const mouseUpEvent = new MouseEvent('mouseup', {
+      clientX: x,
+      clientY: endY,
+      bubbles: true,
+      cancelable: true,
+      button: 0
+    });
+    
+    // Execute the drag sequence on the scrollbar face
+    scrollbarFace.dispatchEvent(mouseDownEvent);
+    await new Promise(resolve => setTimeout(resolve, 50));
+    scrollbarFace.dispatchEvent(mouseMoveEvent);
+    await new Promise(resolve => setTimeout(resolve, 50));
+    scrollbarFace.dispatchEvent(mouseUpEvent);
+  }
+
+  private getCurrentPlayerNames(): string[] {
+    const playerRows = this.getPlayerRows();
+    const playerNames = new Set<string>();
+    
+    for (const playerRow of playerRows) {
+      const name = playerRow.getName().trim();
+      if (name) {
+        playerNames.add(name);
+      }
+    }
+    
+    return Array.from(playerNames);
   }
 
   async getPlayerNames(requiredCount: number): Promise<string[]> {
-    console.log(`ESPN Parser: Attempting to get ${requiredCount} player names`);
+    console.log(`ESPN Parser: Getting ${requiredCount} player names`);
     
+    // Step 2: Scroll to top
+    await this.scrollToTop();
+    
+    // Step 3: Small delay for DOM update
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // Step 4: Loop while collecting players
     const playerNames = new Set<string>();
     let attempts = 0;
-    const maxAttempts = 50; // Prevent infinite loops
+    const maxAttempts = 100; // Prevent infinite loops
     
     while (attempts < maxAttempts && playerNames.size < requiredCount) {
-      // Get all player rows currently in the DOM
-      const currentPlayerRows = this.getPlayerRows();
-      
-      // Update the set with player names
-      for (const playerRow of currentPlayerRows) {
-        const name = playerRow.getName().trim();
-        if (name) {
-          playerNames.add(name);
-        }
-      }
+      // Read current player names
+      const currentNames = this.getCurrentPlayerNames();
+      currentNames.forEach(name => playerNames.add(name));
       
       console.log(`ESPN Parser: Found ${playerNames.size} unique player names (needed ${requiredCount})`);
       
@@ -334,16 +290,19 @@ export class ESPNParser extends BaseParser {
         break;
       }
       
-      // Scroll for more players
-      await this.scrollForMorePlayers();
+      // Scroll down slightly
+      await this.scrollDown();
+      
+      // Small delay for DOM update
+      await new Promise(resolve => setTimeout(resolve, 200));
       
       attempts++;
-      console.log(`ESPN Parser: Scroll attempt ${attempts}/${maxAttempts}`);
     }
     
-    console.log(`ESPN Parser: Final collection: ${playerNames.size} player names`);
+    // Step 5: Scroll back to top
+    await this.scrollToTop();
     
-    // Convert set to array and return
+    console.log(`ESPN Parser: Final collection: ${playerNames.size} player names`);
     return Array.from(playerNames);
   }
 } 

@@ -45,8 +45,6 @@ export interface SiteParser {
   name: string;
   canParse(url: string): boolean;
   getPlayerRows(): PlayerRow[];
-  getPlayerData(playerName: string): Promise<PlayerData | null>;
-  scrollForMorePlayers(): Promise<boolean>;
   getPlayerNames(requiredCount: number): Promise<string[]>;
 }
 

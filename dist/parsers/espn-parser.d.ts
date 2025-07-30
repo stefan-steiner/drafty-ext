@@ -1,4 +1,4 @@
-import { PlayerRow, PlayerData } from '../types';
+import { PlayerRow } from '../types';
 import { BaseParser } from './base-parser';
 export declare class ESPNPlayerRow implements PlayerRow {
     root: HTMLElement;
@@ -11,10 +11,10 @@ export declare class ESPNParser extends BaseParser {
     name: string;
     canParse(url: string): boolean;
     getPlayerRows(): PlayerRow[];
-    getPlayerData(playerName: string): Promise<PlayerData | null>;
-    private createLoadingOverlay;
-    private removeLoadingOverlay;
+    private findScrollbar;
+    private findScrollbarFace;
     private scrollToTop;
-    scrollForMorePlayers(): Promise<boolean>;
+    private scrollDown;
+    private getCurrentPlayerNames;
     getPlayerNames(requiredCount: number): Promise<string[]>;
 }
