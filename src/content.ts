@@ -1,8 +1,8 @@
+import { ParserManager } from './parsers/parser-manager';
 import { ApiService } from './services/api';
 import { StorageService } from './services/storage';
-import { ParserManager } from './parsers/parser-manager';
 import { PlayerRow } from './types';
-import { PlayerData, PickAssistantResponse } from './types/api';
+import { PickAssistantResponse, PlayerData } from './types/api';
 
 class ContentScript {
   private apiService: ApiService;
@@ -27,7 +27,7 @@ class ContentScript {
     this.setupObserver();
     this.addButtonsToAllRows();
     this.createFloatingButton();
-    
+
     this.isInitialized = true;
   }
 
@@ -54,7 +54,7 @@ class ContentScript {
   private addButtonsToAllRows(): void {
     const currentUrl = window.location.href;
     const playerRows = this.parserManager.getPlayerRows(currentUrl);
-    
+
     playerRows.forEach((playerRow: PlayerRow) => {
       // Only add action button if the row has a valid player name
       const playerName = playerRow.getName().trim();
@@ -68,12 +68,12 @@ class ContentScript {
 
   private async handlePlayerClick(playerRow: PlayerRow): Promise<void> {
     const playerName = playerRow.getName();
-    
+
     if (!playerName) {
       this.showError('Could not find player name');
       return;
     }
-    
+
     try {
       const token = await this.storageService.getAuthToken();
       if (!token) {
@@ -82,7 +82,7 @@ class ContentScript {
       }
 
       const response = await this.apiService.getPlayerDataByName(playerName, 'standard');
-      
+
       if (response.success && response.data) {
         this.showPlayerData(playerRow.root, playerName, response.data);
       } else {
@@ -134,17 +134,17 @@ class ContentScript {
     `;
 
     const content = document.createElement('div');
-    
+
     // Add basic player info
     const basicInfo = document.createElement('div');
     basicInfo.style.cssText = 'margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px;';
-    
+
     let basicInfoHtml = '';
     if (data.position) basicInfoHtml += `<strong>Position:</strong> ${data.position}<br>`;
     if (data.team) basicInfoHtml += `<strong>Team:</strong> ${data.team}<br>`;
     if (data.rank) basicInfoHtml += `<strong>Rank:</strong> ${data.rank}<br>`;
     if (data.adp) basicInfoHtml += `<strong>ADP:</strong> ${data.adp}<br>`;
-    
+
     basicInfo.innerHTML = basicInfoHtml;
     content.appendChild(basicInfo);
 
@@ -154,22 +154,6 @@ class ContentScript {
       overviewDiv.style.cssText = 'margin-bottom: 15px;';
       overviewDiv.innerHTML = `<strong>Overview:</strong><br>${data.player_overview}`;
       content.appendChild(overviewDiv);
-    }
-
-    // Add team expectations
-    if (data.team_expectations) {
-      const expectationsDiv = document.createElement('div');
-      expectationsDiv.style.cssText = 'margin-bottom: 15px;';
-      expectationsDiv.innerHTML = `<strong>Team Expectations:</strong><br>${data.team_expectations}`;
-      content.appendChild(expectationsDiv);
-    }
-
-    // Add depth chart role
-    if (data.depth_chart_role) {
-      const depthChartDiv = document.createElement('div');
-      depthChartDiv.style.cssText = 'margin-bottom: 15px;';
-      depthChartDiv.innerHTML = `<strong>Depth Chart Role:</strong><br>${data.depth_chart_role}`;
-      content.appendChild(depthChartDiv);
     }
 
     // Add upside
@@ -188,35 +172,31 @@ class ContentScript {
       content.appendChild(downsideDiv);
     }
 
-    // Add sources if available
-    const sources = [];
-    if (data.player_overview_sources) sources.push(`Overview: ${data.player_overview_sources}`);
-    if (data.team_expectations_sources) sources.push(`Team Expectations: ${data.team_expectations_sources}`);
-    if (data.depth_chart_role_sources) sources.push(`Depth Chart: ${data.depth_chart_role_sources}`);
-    if (data.upside_sources) sources.push(`Upside: ${data.upside_sources}`);
-    if (data.downside_sources) sources.push(`Downside: ${data.downside_sources}`);
-
-    if (sources.length > 0) {
-      const sourcesDiv = document.createElement('div');
-      sourcesDiv.style.cssText = 'margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; font-size: 12px; color: #666;';
-      sourcesDiv.innerHTML = `<strong>Sources:</strong><br>${sources.join('<br>')}`;
-      content.appendChild(sourcesDiv);
-    }
-
     // Create close button
     const closeButton = document.createElement('button');
     closeButton.textContent = 'Close';
     closeButton.style.cssText = `
-      background: #6c757d;
+      background: #00BFFF;
       color: white;
       border: none;
-      border-radius: 4px;
-      padding: 8px 16px;
+      border-radius: 6px;
+      padding: 10px 20px;
       cursor: pointer;
-      margin-top: 15px;
       font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s ease;
     `;
-    
+
+    closeButton.addEventListener('mouseenter', () => {
+      closeButton.style.transform = 'scale(1.02)';
+      closeButton.style.background = '#00008B';
+    });
+
+    closeButton.addEventListener('mouseleave', () => {
+      closeButton.style.transform = 'scale(1)';
+      closeButton.style.background = '#00BFFF';
+    });
+
     closeButton.addEventListener('click', () => {
       popup.remove();
     });
@@ -253,7 +233,7 @@ class ContentScript {
       background: rgba(0,0,0,0.5);
       z-index: 10000;
     `;
-    
+
     overlay.addEventListener('click', () => {
       overlay.remove();
       popup.remove();
@@ -281,9 +261,9 @@ class ContentScript {
       box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     `;
     notification.textContent = message;
-    
+
     document.body.appendChild(notification);
-    
+
     setTimeout(() => {
       if (notification.parentNode) {
         notification.parentNode.removeChild(notification);
@@ -292,50 +272,31 @@ class ContentScript {
   }
 
   private createFloatingButton(): void {
-    
+
     // Remove existing floating button if any
     const existingButton = document.querySelector('.drafty-floating-btn');
     if (existingButton) {
       existingButton.remove();
     }
 
-    // Add CSS for spinner
-    if (!document.querySelector('#drafty-floating-styles')) {
-      const style = document.createElement('style');
-      style.id = 'drafty-floating-styles';
-      style.textContent = `
-        .drafty-spinner {
-          width: 16px;
-          height: 16px;
-          border: 2px solid rgba(255,255,255,0.3);
-          border-top: 2px solid white;
-          border-radius: 50%;
-          animation: drafty-spin 1s linear infinite;
-        }
-        
-        @keyframes drafty-spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        
-        .drafty-floating-btn-content {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-      `;
-      document.head.appendChild(style);
-    }
-
     // Create floating button
     this.floatingButton = document.createElement('div');
     this.floatingButton.className = 'drafty-floating-btn';
+
+    // Load SVG from file
+    const svgUrl = chrome.runtime.getURL('assets/drafty_logo.svg');
+    const img = document.createElement('img');
+    img.src = svgUrl;
+    img.style.cssText = `
+      width: 120px;
+      height: 50px;
+      filter: brightness(0) invert(1);
+    `;
+
     this.floatingButton.innerHTML = `
       <div class="drafty-floating-btn-content">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z" fill="currentColor"/>
-        </svg>
-        <span>Pick Assistant</span>
+        ${img.outerHTML}
+        <span>PICK ASSISTANT</span>
       </div>
     `;
 
@@ -343,11 +304,11 @@ class ContentScript {
       position: fixed;
       top: 20px;
       right: 20px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: #00BFFF;
       color: white;
       border: none;
       border-radius: 50px;
-      padding: 12px 20px;
+      padding: 20px 24px;
       cursor: pointer;
       z-index: 10000;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -361,11 +322,27 @@ class ContentScript {
       gap: 8px;
     `;
 
+    // Add CSS for floating button content
+    if (!document.querySelector('#drafty-floating-styles')) {
+      const style = document.createElement('style');
+      style.id = 'drafty-floating-styles';
+      style.textContent = `
+        .drafty-floating-btn-content {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
     // Add hover effects
     this.floatingButton.addEventListener('mouseenter', () => {
       if (this.floatingButton) {
         this.floatingButton.style.transform = 'scale(1.05)';
         this.floatingButton.style.boxShadow = '0 6px 25px rgba(0,0,0,0.4)';
+        this.floatingButton.style.background = '#00008B';
       }
     });
 
@@ -373,6 +350,7 @@ class ContentScript {
       if (this.floatingButton) {
         this.floatingButton.style.transform = 'scale(1)';
         this.floatingButton.style.boxShadow = '0 4px 20px rgba(0,0,0,0.3)';
+        this.floatingButton.style.background = '#00BFFF';
       }
     });
 
@@ -399,38 +377,38 @@ class ContentScript {
       const rect = this.floatingButton!.getBoundingClientRect();
       this.dragOffset.x = e.clientX - rect.left;
       this.dragOffset.y = e.clientY - rect.top;
-      
+
       const handleMouseMove = (e: MouseEvent) => {
         e.preventDefault();
         this.isDragging = true;
-        
+
         requestAnimationFrame(() => {
           const x = e.clientX - this.dragOffset.x;
           const y = e.clientY - this.dragOffset.y;
-          
+
           // Keep button within viewport bounds
           const maxX = window.innerWidth - this.floatingButton!.offsetWidth;
           const maxY = window.innerHeight - this.floatingButton!.offsetHeight;
-          
+
           const clampedX = Math.max(0, Math.min(x, maxX));
           const clampedY = Math.max(0, Math.min(y, maxY));
-          
+
           this.floatingButton!.style.left = `${clampedX}px`;
           this.floatingButton!.style.top = `${clampedY}px`;
           this.floatingButton!.style.right = 'auto';
         });
       };
-      
+
       const handleMouseUp = () => {
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
-        
+
         // Reset dragging state after a short delay
         setTimeout(() => {
           this.isDragging = false;
         }, 50);
       };
-      
+
       document.addEventListener('mousemove', handleMouseMove, { passive: false });
       document.addEventListener('mouseup', handleMouseUp);
     });
@@ -439,40 +417,40 @@ class ContentScript {
   private async handleFloatingButtonClick(): Promise<void> {
     try {
       console.log('🚀 Floating button clicked, starting player collection...');
-      
+
       // Step 1: Show loading overlay for searching players
       this.showLoadingOverlay('Searching available players');
-      
+
       // Step 2-6: Get player names using parser
       const currentUrl = window.location.href;
       const parser = this.parserManager.getParserForUrl(currentUrl);
-      
+
       if (!parser) {
         console.log('❌ No parser found for this URL');
         this.hideLoadingOverlay();
         this.showError('No parser found for this URL');
         return;
       }
-      
+
       console.log('🔍 Starting to collect players...');
       const availableNames = await parser.getAvailableNames(25);
       const draftedNames = await parser.getDraftedNames();
-      
+
       console.log(`📊 Found ${availableNames.length} available player names`);
       console.log(`📊 Found ${draftedNames.length} drafted player names`);
-      
+
       // Remove the first loading overlay
       this.hideLoadingOverlay();
-      
+
       if (availableNames.length === 0) {
         console.log('❌ No players found on this page');
         this.showError('No players found on this page');
         return;
       }
-      
+
       // Step 7: Show loading overlay for analyzing picks
       this.showLoadingOverlay('Analyzing possible picks');
-      
+
       // Step 8: Call backend API
       console.log('🌐 Calling API with available names and drafted names:', availableNames, draftedNames);
       const response = await this.apiService.pickAssistant({
@@ -480,12 +458,12 @@ class ContentScript {
         players_drafted: draftedNames,
         scoring_type: 'standard' // You can make this configurable later
       });
-      
+
       console.log('📡 API response received:', response);
-      
+
       // Step 9: Remove loading overlay and show results
       this.hideLoadingOverlay();
-      
+
       if (response.success && response.data) {
         console.log('✅ API call successful, showing pick assistant data');
         this.showPickAssistant(response.data);
@@ -503,7 +481,7 @@ class ContentScript {
   private showLoadingOverlay(message: string): void {
     // Remove any existing overlay
     this.hideLoadingOverlay();
-    
+
     const overlay = document.createElement('div');
     overlay.id = 'drafty-loading-overlay';
     overlay.style.cssText = `
@@ -520,18 +498,18 @@ class ContentScript {
       pointer-events: auto;
       user-select: none;
     `;
-    
+
     // Add loading spinner
     const spinner = document.createElement('div');
     spinner.style.cssText = `
       width: 50px;
       height: 50px;
       border: 4px solid rgba(255, 255, 255, 0.3);
-      border-top: 4px solid #87CEEB;
+      border-top: 4px solid #00BFFF;
       border-radius: 50%;
       animation: drafty-spin 1s linear infinite;
     `;
-    
+
     // Add loading text
     const text = document.createElement('div');
     text.textContent = message;
@@ -541,7 +519,7 @@ class ContentScript {
       font-family: Arial, sans-serif;
       font-size: 16px;
     `;
-    
+
     // Add CSS animation
     const style = document.createElement('style');
     style.textContent = `
@@ -551,18 +529,18 @@ class ContentScript {
       }
     `;
     document.head.appendChild(style);
-    
+
     const container = document.createElement('div');
     container.style.cssText = `
       display: flex;
       flex-direction: column;
       align-items: center;
     `;
-    
+
     container.appendChild(spinner);
     container.appendChild(text);
     overlay.appendChild(container);
-    
+
     // Prevent ALL events
     const preventEvent = (e: Event) => {
       e.preventDefault();
@@ -570,7 +548,7 @@ class ContentScript {
       e.stopImmediatePropagation();
       return false;
     };
-    
+
     // Block all possible events
     const events = [
       'mousedown', 'mouseup', 'mousemove', 'click', 'dblclick', 'contextmenu',
@@ -578,11 +556,11 @@ class ContentScript {
       'touchmove', 'dragstart', 'drag', 'dragend', 'drop', 'focus', 'blur',
       'input', 'change', 'submit', 'reset', 'select', 'selectstart'
     ];
-    
+
     events.forEach(eventType => {
       overlay.addEventListener(eventType, preventEvent, { capture: true, passive: false });
     });
-    
+
     document.body.appendChild(overlay);
   }
 
@@ -591,7 +569,7 @@ class ContentScript {
     if (overlay) {
       overlay.remove();
     }
-    
+
     // Remove the style element we added
     const style = document.querySelector('style');
     if (style && style.textContent?.includes('drafty-spin')) {
@@ -639,7 +617,7 @@ class ContentScript {
     `;
 
     const content = document.createElement('div');
-    
+
     // Handle pick assistant response data
     const options = [
       { key: 'option1', data: data.option1 },
@@ -647,11 +625,11 @@ class ContentScript {
       { key: 'option3', data: data.option3 }
     ];
     let hasValidOptions = false;
-    
+
     options.forEach((option, index) => {
       if (option.data && option.data.name) {
         hasValidOptions = true;
-        
+
         const optionDiv = document.createElement('div');
         optionDiv.style.cssText = `
           padding: 16px;
@@ -661,7 +639,7 @@ class ContentScript {
           background: ${index === 0 ? '#f8fff9' : index === 1 ? '#fffef8' : '#f8fdff'};
           position: relative;
         `;
-        
+
         // Add rank badge
         const rankBadge = document.createElement('div');
         rankBadge.style.cssText = `
@@ -677,7 +655,7 @@ class ContentScript {
         `;
         rankBadge.textContent = `#${index + 1}`;
         optionDiv.appendChild(rankBadge);
-        
+
         // Player name
         const playerName = document.createElement('div');
         playerName.style.cssText = `
@@ -689,7 +667,7 @@ class ContentScript {
         `;
         playerName.textContent = option.data.name;
         optionDiv.appendChild(playerName);
-        
+
         // Reason
         if (option.data.reason) {
           const reasonDiv = document.createElement('div');
@@ -702,11 +680,11 @@ class ContentScript {
           reasonDiv.textContent = option.data.reason;
           optionDiv.appendChild(reasonDiv);
         }
-        
+
         content.appendChild(optionDiv);
       }
     });
-    
+
     if (!hasValidOptions) {
       const noDataDiv = document.createElement('div');
       noDataDiv.style.cssText = 'text-align: center; color: #666; padding: 20px;';
@@ -728,15 +706,15 @@ class ContentScript {
       font-weight: 600;
       transition: all 0.3s ease;
     `;
-    
+
     closeButton.addEventListener('mouseenter', () => {
       closeButton.style.transform = 'scale(1.02)';
     });
-    
+
     closeButton.addEventListener('mouseleave', () => {
       closeButton.style.transform = 'scale(1)';
     });
-    
+
     closeButton.addEventListener('click', () => {
       popup.remove();
     });
@@ -773,7 +751,7 @@ class ContentScript {
       background: rgba(0,0,0,0.5);
       z-index: 10000;
     `;
-    
+
     overlay.addEventListener('click', () => {
       overlay.remove();
       popup.remove();
@@ -790,13 +768,13 @@ class ContentScript {
       this.observer.disconnect();
       this.observer = null;
     }
-    
+
     // Clean up any existing popups
     const existingPopup = document.querySelector('.drafty-popup');
     if (existingPopup) {
       existingPopup.remove();
     }
-    
+
     const existingOverlay = document.querySelector('div[style*="rgba(0,0,0,0.5)"]');
     if (existingOverlay) {
       existingOverlay.remove();
@@ -807,7 +785,7 @@ class ContentScript {
       this.floatingButton.remove();
       this.floatingButton = null;
     }
-    
+
     this.isInitialized = false;
   }
 }
@@ -821,4 +799,4 @@ if (document.readyState === 'loading') {
 } else {
   const contentScript = new ContentScript();
   contentScript.init();
-} 
+}
