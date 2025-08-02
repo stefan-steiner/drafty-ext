@@ -1,6 +1,6 @@
-import { SiteParser, PlayerRow } from '../types';
+import { PlayerRow, SiteParser } from '../types';
 import { ESPNParser } from './espn-parser';
-import { BaseParser } from './base-parser';
+import { YahooParser } from './yahoo-parser';
 
 export class ParserManager {
   private static instance: ParserManager;
@@ -20,9 +20,9 @@ export class ParserManager {
   private registerParsers(): void {
     // Register all available parsers
     this.parsers.push(new ESPNParser());
-    
+    this.parsers.push(new YahooParser());
+
     // Future parsers can be added here:
-    // this.parsers.push(new YahooParser());
     // this.parsers.push(new SleeperParser());
     // this.parsers.push(new NFLParser());
   }
@@ -38,4 +38,4 @@ export class ParserManager {
     }
     return parser.getPlayerRows();
   }
-} 
+}

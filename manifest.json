@@ -10,6 +10,7 @@
   ],
   "host_permissions": [
     "https://fantasy.espn.com/*",
+    "https://football.fantasysports.yahoo.com/*",
     "https://api.drafty.com/*"
   ],
   "background": {
@@ -17,7 +18,10 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://fantasy.espn.com/football/draft*"],
+      "matches": [
+        "https://fantasy.espn.com/football/draft*",
+        "https://football.fantasysports.yahoo.com/draftclient/*"
+      ],
       "js": ["content.js"],
       "run_at": "document_end"
     }
@@ -25,7 +29,10 @@
   "web_accessible_resources": [
     {
       "resources": ["assets/*"],
-      "matches": ["https://fantasy.espn.com/*"]
+      "matches": [
+        "https://fantasy.espn.com/*",
+        "https://football.fantasysports.yahoo.com/*"
+      ]
     }
   ],
   "action": {
@@ -37,4 +44,4 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   }
-} 
+}
