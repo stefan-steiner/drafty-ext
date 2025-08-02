@@ -1,6 +1,6 @@
 import { ApiService } from './services/api';
 import { StorageService } from './services/storage';
-import { AuthToken, User } from './types';
+import { User } from './types';
 
 class PopupManager {
   private apiService: ApiService;
@@ -25,11 +25,11 @@ class PopupManager {
 
   private async checkAuthStatus(): Promise<void> {
     const token = await this.storageService.getAuthToken();
-    
+
     if (token) {
       this.apiService.setAuthToken(token);
       const user = await this.storageService.getUserData();
-      
+
       if (user) {
         this.currentUser = user;
         this.showDashboard();
@@ -96,30 +96,32 @@ class PopupManager {
 
   private async handleLogin(e: Event): Promise<void> {
     e.preventDefault();
-    
+
     const username = (document.getElementById('loginUsername') as HTMLInputElement).value;
     const password = (document.getElementById('loginPassword') as HTMLInputElement).value;
-    
+
     if (!username || !password) {
       this.showError('Please fill in all fields');
       return;
     }
 
     this.showLoading();
-    
+
     try {
       const response = await this.apiService.login(username, password);
-      
+
       if (response.success && response.data) {
         const { token, user } = response.data;
-        
+
         // Store token and user data
         await this.storageService.setAuthToken(token);
         await this.storageService.setUserData(user);
-        
+
+        console.log('Popup: Auth token stored in storage');
+
         this.apiService.setAuthToken(token);
         this.currentUser = user;
-        
+
         this.showDashboard();
       } else {
         this.showError(response.error || 'Login failed');
@@ -134,32 +136,34 @@ class PopupManager {
 
   private async handleSignup(e: Event): Promise<void> {
     e.preventDefault();
-    
+
     const name = (document.getElementById('signupName') as HTMLInputElement).value;
     const username = (document.getElementById('signupUsername') as HTMLInputElement).value;
     const email = (document.getElementById('signupEmail') as HTMLInputElement).value;
     const password = (document.getElementById('signupPassword') as HTMLInputElement).value;
-    
+
     if (!name || !username || !email || !password) {
       this.showError('Please fill in all fields');
       return;
     }
 
     this.showLoading();
-    
+
     try {
       const response = await this.apiService.signup(username, email, password, name);
-      
+
       if (response.success && response.data) {
         const { token, user } = response.data;
-        
+
         // Store token and user data
         await this.storageService.setAuthToken(token);
         await this.storageService.setUserData(user);
-        
+
+        console.log('Popup: Auth token stored in storage (signup)');
+
         this.apiService.setAuthToken(token);
         this.currentUser = user;
-        
+
         this.showDashboard();
       } else {
         this.showError(response.error || 'Signup failed');
@@ -178,13 +182,13 @@ class PopupManager {
     } catch (error) {
       console.error('Logout API error:', error);
     }
-    
+
     // Clear local data regardless of API response
     await this.storageService.clearAuthToken();
     await this.storageService.clearUserData();
     this.apiService.clearAuthToken();
     this.currentUser = null;
-    
+
     this.showLogin();
   }
 
@@ -192,7 +196,7 @@ class PopupManager {
     // Hide all screens
     const screens = document.querySelectorAll('.screen');
     screens.forEach(screen => screen.classList.add('hidden'));
-    
+
     // Show target screen
     const targetScreen = document.getElementById(screenId);
     if (targetScreen) {
@@ -224,7 +228,7 @@ class PopupManager {
 
   private showDashboard(): void {
     this.showScreen('dashboard');
-    
+
     // Update user name
     const userNameElement = document.getElementById('userName');
     if (userNameElement && this.currentUser) {
@@ -244,4 +248,4 @@ class PopupManager {
 // Initialize popup when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
   new PopupManager();
-}); 
+});

@@ -1,5 +1,7 @@
 // API Response Types for Django Backend
 
+import { DraftedPlayer } from './index';
+
 export interface PlayerData {
   id: string;
   full_name: string;
@@ -29,7 +31,8 @@ export interface ApiError {
 
 // Request types
 export interface PickAssistantRequest {
-  players_drafted: string[];
+  players_drafted?: string[];
+  players_drafted_abbreviations?: DraftedPlayer[];
   players_available: string[];
   scoring_type?: 'standard' | 'ppr' | 'half_ppr';
 }

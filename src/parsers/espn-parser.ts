@@ -23,10 +23,6 @@ export class ESPNPlayerRow implements PlayerRow {
     return clonedElement.textContent?.trim() || '';
   }
 
-  setNote(note: string) {
-    console.log(`Setting note for ${this.getName()}: ${note}`);
-  }
-
   addActionButton(callback: () => void): void {
     // Check if button already exists
     if (this.root.querySelector('.drafty-action-btn')) {
@@ -481,5 +477,9 @@ export class ESPNParser extends BaseParser {
 
     console.log(`ESPN Parser: Final drafted collection: ${playerNames.length} player names`);
     return playerNames;
+  }
+
+  usesDraftAbbreviations(): boolean {
+    return false;
   }
 }

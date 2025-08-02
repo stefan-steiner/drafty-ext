@@ -1,11 +1,10 @@
 import { AuthToken, User } from '../types';
-import { 
-  PlayerData, 
-  PickAssistantResponse, 
-  PickAssistantRequest, 
-  ApiResponse, 
-  ApiError,
-  ScoringType 
+import {
+  ApiResponse,
+  PickAssistantRequest,
+  PickAssistantResponse,
+  PlayerData,
+  ScoringType
 } from '../types/api';
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
@@ -115,9 +114,9 @@ export class ApiService {
       token: string;
     }>('/users/register/', {
       method: 'POST',
-      body: JSON.stringify({ 
-        username, 
-        email, 
+      body: JSON.stringify({
+        username,
+        email,
         password,
         first_name: name.split(' ')[0] || name,
         last_name: name.split(' ').slice(1).join(' ') || '',
@@ -182,4 +181,4 @@ export class ApiService {
 
     return response as any;
   }
-} 
+}

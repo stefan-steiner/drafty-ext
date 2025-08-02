@@ -25,6 +25,7 @@ class ContentScript {
 
     await this.initializeAuth();
     this.setupObserver();
+    this.setupStorageListener();
     this.addButtonsToAllRows();
     this.createFloatingButton();
 
@@ -33,9 +34,21 @@ class ContentScript {
 
   private async initializeAuth(): Promise<void> {
     const token = await this.storageService.getAuthToken();
+    console.log('Content script: Auth token retrieved:', token ? 'Token exists' : 'No token');
     if (token) {
       this.apiService.setAuthToken(token);
+      console.log('Content script: Auth token set in API service');
     }
+  }
+
+  private setupStorageListener(): void {
+    // Listen for storage changes to detect auth token updates
+    chrome.storage.onChanged.addListener((changes, namespace) => {
+      if (namespace === 'local' && changes.auth_token) {
+        console.log('Auth token changed, re-initializing auth...');
+        this.initializeAuth();
+      }
+    });
   }
 
   private setupObserver(): void {
@@ -495,11 +508,23 @@ class ContentScript {
 
       // Step 8: Call backend API
       console.log('🌐 Calling API with available names and drafted names:', availableNames, draftedNames);
-      const response = await this.apiService.pickAssistant({
+
+      // Prepare API request based on the parser type
+      let apiRequest: any = {
         players_available: availableNames,
-        players_drafted: draftedNames,
         scoring_type: 'standard' // You can make this configurable later
-      });
+      };
+
+      // Use the parser's helper method to determine the format
+      if (parser.usesDraftAbbreviations()) {
+        // Yahoo format - array of DraftedPlayer objects
+        apiRequest.players_drafted_abbreviations = draftedNames;
+      } else {
+        // ESPN format - array of strings
+        apiRequest.players_drafted = draftedNames;
+      }
+
+      const response = await this.apiService.pickAssistant(apiRequest);
 
       console.log('📡 API response received:', response);
 

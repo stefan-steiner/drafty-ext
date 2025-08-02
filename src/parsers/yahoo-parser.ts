@@ -1,4 +1,4 @@
-import { PlayerRow } from '../types';
+import { DraftedPlayer, PlayerRow } from '../types';
 import { BaseParser } from './base-parser';
 
 // Yahoo-specific constants
@@ -21,10 +21,6 @@ export class YahooPlayerRow implements PlayerRow {
     buttons.forEach(btn => btn.remove());
 
     return clonedElement.textContent?.trim() || '';
-  }
-
-  setNote(note: string) {
-    console.log(`Setting note for ${this.getName()}: ${note}`);
   }
 
   addActionButton(callback: () => void): void {
@@ -266,18 +262,34 @@ export class YahooParser extends BaseParser {
     return filledRows;
   }
 
-  private getCurrentDraftedNames(): string[] {
+  private getCurrentDraftedNames(): DraftedPlayer[] {
     const playerElements = this.findDraftedPlayerElements();
-    const playerNames: string[] = [];
+    const draftedPlayers: DraftedPlayer[] = [];
 
     for (const element of playerElements) {
-      const nameElement = element.querySelector<HTMLElement>('td span span:first-child');
-      if (nameElement && nameElement.textContent?.trim()) {
-        playerNames.push(nameElement.textContent.trim());
+      // Extract name from the first span with class "Whs(n)"
+      const nameElement = element.querySelector<HTMLElement>('td span span.Whs\\(n\\)');
+      const name = nameElement?.textContent?.trim() || '';
+
+      // Extract team from the first abbr element
+      const teamElement = element.querySelector<HTMLElement>('td span span abbr');
+      const team = teamElement?.textContent?.trim() || '';
+
+      // Extract position from the second abbr element (the one with the actual position like "WR")
+      const abbrElements = element.querySelectorAll<HTMLElement>('td span span abbr');
+      const positionElement = abbrElements[1]; // Second abbr element contains the position
+      const position = positionElement?.textContent?.trim() || '';
+
+      if (name && position && team) {
+        draftedPlayers.push({
+          name,
+          position,
+          team
+        });
       }
     }
 
-    return playerNames;
+    return draftedPlayers;
   }
 
   private async scrollDraftedToTop(): Promise<void> {
@@ -324,7 +336,7 @@ export class YahooParser extends BaseParser {
     await new Promise(resolve => setTimeout(resolve, 200));
   }
 
-  async getDraftedNames(): Promise<string[]> {
+  async getDraftedNames(): Promise<DraftedPlayer[]> {
     console.log(`Yahoo Parser: Getting all drafted player names`);
 
     // Step 1: Check if the section is scrollable
@@ -354,7 +366,7 @@ export class YahooParser extends BaseParser {
     await new Promise(resolve => setTimeout(resolve, 300));
 
     // Step 4: Loop while collecting drafted players until we reach the bottom
-    const playerNames: string[] = [];
+    const playerNames: DraftedPlayer[] = [];
     let attempts = 0;
     const maxAttempts = 100; // Prevent infinite loops
     let previousScrollTop = -1;
@@ -362,9 +374,9 @@ export class YahooParser extends BaseParser {
     while (attempts < maxAttempts) {
       // Read current drafted player names
       const currentNames = this.getCurrentDraftedNames();
-      currentNames.forEach(name => {
-        if (!playerNames.includes(name)) {
-          playerNames.push(name);
+      currentNames.forEach(player => {
+        if (!playerNames.some(existing => existing.name === player.name)) {
+          playerNames.push(player);
         }
       });
 
@@ -397,5 +409,9 @@ export class YahooParser extends BaseParser {
 
     console.log(`Yahoo Parser: Final drafted collection: ${playerNames.length} player names`);
     return playerNames;
+  }
+
+  usesDraftAbbreviations(): boolean {
+    return true;
   }
 }

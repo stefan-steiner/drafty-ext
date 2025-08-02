@@ -2,7 +2,6 @@
 export interface PlayerRow {
   root: HTMLElement;
   getName(): string;
-  setNote(note: string): void;
   addActionButton(callback: () => void): void;
 }
 
@@ -40,17 +39,24 @@ export interface ApiResponse<T> {
   error?: string;
 }
 
+export interface DraftedPlayer {
+  name: string;
+  position: string;
+  team: string;
+}
+
 // Parser interface for different sites
 export interface SiteParser {
   name: string;
   canParse(url: string): boolean;
   getPlayerRows(): PlayerRow[];
   getAvailableNames(requiredCount: number): Promise<string[]>;
-  getDraftedNames(): Promise<string[]>;
+  getDraftedNames(): Promise<string[] | DraftedPlayer[]>;
+  usesDraftAbbreviations(): boolean;
 }
 
 // Storage keys
 export const STORAGE_KEYS = {
   AUTH_TOKEN: 'auth_token',
   USER_DATA: 'user_data',
-} as const; 
+} as const;
