@@ -148,11 +148,37 @@ class ContentScript {
     basicInfo.innerHTML = basicInfoHtml;
     content.appendChild(basicInfo);
 
+    // Helper function to format bullet points
+    const formatBulletPoints = (text: string): string => {
+      if (!text) return '';
+
+      // Split by newlines and filter out empty lines
+      const lines = text.split('\n').filter(line => line.trim());
+
+      return lines.map(line => {
+        // If line starts with dash, convert to bullet point
+        if (line.trim().startsWith('-')) {
+          const content = line.trim().substring(1).trim();
+          return `<li>${content}</li>`;
+        }
+        // Otherwise, treat as regular paragraph
+        return `<p>${line.trim()}</p>`;
+      }).join('');
+    };
+
     // Add player overview
     if (data.player_overview) {
       const overviewDiv = document.createElement('div');
       overviewDiv.style.cssText = 'margin-bottom: 15px;';
-      overviewDiv.innerHTML = `<strong>Overview:</strong><br>${data.player_overview}`;
+
+      const formattedOverview = formatBulletPoints(data.player_overview);
+      if (formattedOverview.includes('<li>')) {
+        // Has bullet points
+        overviewDiv.innerHTML = `<strong>Overview:</strong><ul style="margin: 8px 0; padding-left: 20px; line-height: 1.6;">${formattedOverview}</ul>`;
+      } else {
+        // Regular text
+        overviewDiv.innerHTML = `<strong>Overview:</strong><br>${formattedOverview}`;
+      }
       content.appendChild(overviewDiv);
     }
 
@@ -160,7 +186,15 @@ class ContentScript {
     if (data.upside) {
       const upsideDiv = document.createElement('div');
       upsideDiv.style.cssText = 'margin-bottom: 15px; padding: 10px; background: #d4edda; border-left: 4px solid #28a745; border-radius: 4px;';
-      upsideDiv.innerHTML = `<strong>Upside:</strong><br>${data.upside}`;
+
+      const formattedUpside = formatBulletPoints(data.upside);
+      if (formattedUpside.includes('<li>')) {
+        // Has bullet points
+        upsideDiv.innerHTML = `<strong>Upside:</strong><ul style="margin: 8px 0; padding-left: 20px; line-height: 1.6;">${formattedUpside}</ul>`;
+      } else {
+        // Regular text
+        upsideDiv.innerHTML = `<strong>Upside:</strong><br>${formattedUpside}`;
+      }
       content.appendChild(upsideDiv);
     }
 
@@ -168,7 +202,15 @@ class ContentScript {
     if (data.downside) {
       const downsideDiv = document.createElement('div');
       downsideDiv.style.cssText = 'margin-bottom: 15px; padding: 10px; background: #f8d7da; border-left: 4px solid #dc3545; border-radius: 4px;';
-      downsideDiv.innerHTML = `<strong>Downside:</strong><br>${data.downside}`;
+
+      const formattedDownside = formatBulletPoints(data.downside);
+      if (formattedDownside.includes('<li>')) {
+        // Has bullet points
+        downsideDiv.innerHTML = `<strong>Downside:</strong><ul style="margin: 8px 0; padding-left: 20px; line-height: 1.6;">${formattedDownside}</ul>`;
+      } else {
+        // Regular text
+        downsideDiv.innerHTML = `<strong>Downside:</strong><br>${formattedDownside}`;
+      }
       content.appendChild(downsideDiv);
     }
 
