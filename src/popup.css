@@ -6,7 +6,7 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
     font-size: 14px;
     line-height: 1.4;
     color: #333;
@@ -15,7 +15,7 @@ body {
 
 #app {
     width: 320px;
-    min-height: 400px;
+    min-height: 200px;
     background: white;
     border-radius: 8px;
     overflow: hidden;
@@ -25,7 +25,7 @@ body {
 /* Screen management */
 .screen {
     padding: 20px;
-    min-height: 400px;
+    min-height: 300px;
     display: flex;
     flex-direction: column;
 }
@@ -34,22 +34,42 @@ body {
     display: none;
 }
 
+/* Dashboard specific styles */
+#dashboard.screen {
+    min-height: 160px;
+    padding: 8px 20px;
+}
+
 /* Header styles */
 .header {
     text-align: center;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
+}
+
+.logo-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.logo {
+    width: 110px;
+    height: 45px;
 }
 
 .header h1 {
     font-size: 24px;
-    font-weight: 700;
-    color: #007bff;
+    font-weight: 800;
+    color: #1a1a1a;
     margin-bottom: 4px;
+    font-family: 'Inter', system-ui, sans-serif;
 }
 
 .header p {
-    color: #6c757d;
-    font-size: 13px;
+    color: #666;
+    font-size: 14px;
+    font-family: 'Inter', system-ui, sans-serif;
 }
 
 /* Form styles */
@@ -67,9 +87,10 @@ body {
 }
 
 .form-group label {
-    font-weight: 500;
-    color: #495057;
-    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+    font-family: 'Inter', system-ui, sans-serif;
 }
 
 .form-group input {
@@ -77,45 +98,47 @@ body {
     border: 1px solid #ced4da;
     border-radius: 4px;
     font-size: 14px;
+    font-family: 'Inter', system-ui, sans-serif;
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .form-group input:focus {
     outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    border-color: #00BFFF;
+    box-shadow: 0 0 0 2px rgba(0, 191, 255, 0.25);
 }
 
 /* Button styles */
 .btn {
-    padding: 10px 16px;
+    padding: 12px 24px;
     border: none;
-    border-radius: 4px;
+    border-radius: 8px;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
+    font-family: 'Inter', system-ui, sans-serif;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
     text-decoration: none;
     display: inline-block;
     text-align: center;
 }
 
 .btn-primary {
-    background: #007bff;
+    background: #00BFFF;
     color: white;
 }
 
 .btn-primary:hover {
-    background: #0056b3;
+    background: #00008B;
 }
 
 .btn-secondary {
-    background: #6c757d;
+    background: #00BFFF;
     color: white;
 }
 
 .btn-secondary:hover {
-    background: #545b62;
+    background: #00008B;
 }
 
 .btn:disabled {
@@ -132,16 +155,19 @@ body {
 }
 
 .footer p {
-    color: #6c757d;
-    font-size: 13px;
+    color: #666;
+    font-size: 14px;
+    font-family: 'Inter', system-ui, sans-serif;
 }
 
 .footer a {
-    color: #007bff;
+    color: #00BFFF;
     text-decoration: none;
+    font-weight: 600;
 }
 
 .footer a:hover {
+    color: #00008B;
     text-decoration: underline;
 }
 
@@ -150,7 +176,7 @@ body {
     width: 32px;
     height: 32px;
     border: 3px solid #e9ecef;
-    border-top: 3px solid #007bff;
+    border-top: 3px solid #00BFFF;
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin: 0 auto 16px;
@@ -164,9 +190,9 @@ body {
 /* Dashboard styles */
 .status {
     background: #f8f9fa;
-    border-radius: 4px;
+    border-radius: 8px;
     padding: 12px;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
 }
 
 .status-item {
@@ -176,37 +202,40 @@ body {
 }
 
 .status-label {
-    font-weight: 500;
-    color: #495057;
+    font-weight: 600;
+    color: #333;
+    font-family: 'Inter', system-ui, sans-serif;
 }
 
 .status-value {
     color: #28a745;
-    font-weight: 500;
+    font-weight: 600;
+    font-family: 'Inter', system-ui, sans-serif;
 }
 
 .actions {
-    margin-bottom: 20px;
+    margin-bottom: 12px;
 }
 
 .info {
     background: #e7f3ff;
     border: 1px solid #b3d9ff;
-    border-radius: 4px;
-    padding: 12px;
+    border-radius: 8px;
+    padding: 16px;
     margin-top: auto;
 }
 
 .info p {
     color: #0056b3;
-    font-size: 13px;
+    font-size: 14px;
     margin: 0;
+    font-family: 'Inter', system-ui, sans-serif;
 }
 
 .info a {
     color: #0056b3;
     text-decoration: none;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .info a:hover {
@@ -217,11 +246,12 @@ body {
 .error-message {
     background: #f8d7da;
     border: 1px solid #f5c6cb;
-    border-radius: 4px;
-    padding: 12px;
+    border-radius: 8px;
+    padding: 16px;
     color: #721c24;
     margin-bottom: 20px;
-    font-size: 13px;
+    font-size: 14px;
+    font-family: 'Inter', system-ui, sans-serif;
 }
 
 /* Responsive adjustments */
@@ -229,8 +259,8 @@ body {
     #app {
         width: 300px;
     }
-    
+
     .screen {
         padding: 16px;
     }
-} 
+}

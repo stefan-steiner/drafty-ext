@@ -17,24 +17,25 @@
         <!-- Login Screen -->
         <div id="login" class="screen hidden">
             <div class="header">
-                <h1>Drafty</h1>
-                <p>Fantasy Football Draft Assistant</p>
+                <div class="logo-container">
+                    <img src="assets/drafty_logo_blue.svg" alt="Drafty" class="logo">
+                </div>
             </div>
-            
+
             <form id="loginForm" class="form">
                 <div class="form-group">
                     <label for="loginUsername">Username</label>
                     <input type="text" id="loginUsername" required>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="loginPassword">Password</label>
                     <input type="password" id="loginPassword" required>
                 </div>
-                
+
                 <button type="submit" class="btn btn-primary">Log In</button>
             </form>
-            
+
             <div class="footer">
                 <p>Don't have an account? <a href="#" id="showSignup">Sign up</a></p>
             </div>
@@ -43,34 +44,35 @@
         <!-- Signup Screen -->
         <div id="signup" class="screen hidden">
             <div class="header">
-                <h1>Drafty</h1>
-                <p>Create your account</p>
+                <div class="logo-container">
+                    <img src="assets/drafty_logo_blue.svg" alt="Drafty" class="logo">
+                </div>
             </div>
-            
+
             <form id="signupForm" class="form">
                 <div class="form-group">
                     <label for="signupName">Full Name</label>
                     <input type="text" id="signupName" required>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="signupUsername">Username</label>
                     <input type="text" id="signupUsername" required>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="signupEmail">Email</label>
                     <input type="email" id="signupEmail" required>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="signupPassword">Password</label>
                     <input type="password" id="signupPassword" required>
                 </div>
-                
+
                 <button type="submit" class="btn btn-primary">Sign Up</button>
             </form>
-            
+
             <div class="footer">
                 <p>Already have an account? <a href="#" id="showLogin">Log in</a></p>
             </div>
@@ -79,23 +81,20 @@
         <!-- Dashboard Screen -->
         <div id="dashboard" class="screen hidden">
             <div class="header">
-                <h1>Drafty</h1>
-                <p>Welcome, <span id="userName">User</span>!</p>
+                <div class="logo-container">
+                    <img src="assets/drafty_logo_blue.svg" alt="Drafty" class="logo">
+                </div>
             </div>
-            
+
             <div class="status">
                 <div class="status-item">
                     <span class="status-label">Status:</span>
                     <span class="status-value" id="authStatus">Connected</span>
                 </div>
             </div>
-            
+
             <div class="actions">
                 <button id="logoutBtn" class="btn btn-secondary">Log Out</button>
-            </div>
-            
-            <div class="info">
-                <p>Visit <a href="https://fantasy.espn.com/football/draft" target="_blank">ESPN Fantasy Football Draft</a> to start using Drafty!</p>
             </div>
         </div>
 
@@ -104,15 +103,15 @@
             <div class="header">
                 <h1>Error</h1>
             </div>
-            
+
             <div class="error-message" id="errorMessage">
                 An error occurred
             </div>
-            
+
             <button id="retryBtn" class="btn btn-primary">Retry</button>
         </div>
     </div>
 
     <script src="popup.js"></script>
 </body>
-</html> 
+</html>
