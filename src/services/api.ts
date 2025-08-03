@@ -6,6 +6,7 @@ import {
   PlayerData,
   ScoringType
 } from '../types/api';
+import { ErrorHandler } from './errorHandler';
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
@@ -56,9 +57,11 @@ export class ApiService {
       const data = await response.json();
 
       if (!response.ok) {
+        // Handle specific error messages from the backend
+        const errorMessage = data.error || data.message || `Server error (${response.status})`;
         return {
           success: false,
-          error: data.error || data.message || `HTTP ${response.status}`,
+          error: errorMessage,
         };
       }
 
@@ -67,23 +70,25 @@ export class ApiService {
         data,
       };
     } catch (error) {
+      // Use ErrorHandler for consistent error messages
+      const errorMessage = ErrorHandler.getErrorMessage(error, 'API request');
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Network error',
+        error: errorMessage,
       };
     }
   }
 
   // Authentication methods
-  async login(username: string, password: string): Promise<ApiResponse<{ token: AuthToken; user: User }>> {
+  async login(email: string, password: string): Promise<ApiResponse<{ token: AuthToken; user: User }>> {
     const response = await this.makeRequest<{
       message: string;
       user_id: number;
-      username: string;
+      email: string;
       token: string;
     }>('/users/login/', {
       method: 'POST',
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ email, password }),
     });
 
     if (response.success && response.data) {
@@ -96,8 +101,7 @@ export class ApiService {
         },
         user: {
           id: response.data.user_id.toString(),
-          email: '', // Django doesn't return email in login response
-          name: response.data.username,
+          email: response.data.email,
         },
       };
       return { success: true, data: transformedData };
@@ -106,20 +110,17 @@ export class ApiService {
     return response as any;
   }
 
-  async signup(username: string, email: string, password: string, name: string): Promise<ApiResponse<{ token: AuthToken; user: User }>> {
+  async signup(email: string, password: string): Promise<ApiResponse<{ token: AuthToken; user: User }>> {
     const response = await this.makeRequest<{
       message: string;
       user_id: number;
-      username: string;
+      email: string;
       token: string;
     }>('/users/register/', {
       method: 'POST',
       body: JSON.stringify({
-        username,
         email,
         password,
-        first_name: name.split(' ')[0] || name,
-        last_name: name.split(' ').slice(1).join(' ') || '',
       }),
     });
 
@@ -133,8 +134,7 @@ export class ApiService {
         },
         user: {
           id: response.data.user_id.toString(),
-          email: email,
-          name: response.data.username,
+          email: response.data.email,
         },
       };
       return { success: true, data: transformedData };
@@ -166,15 +166,14 @@ export class ApiService {
     const response = await this.makeRequest<{
       valid: boolean;
       user_id: number;
-      username: string;
+      email: string;
     }>('/users/validate-token/');
 
     if (response.success && response.data) {
       // Transform Django response to match extension's expected format
       const transformedData = {
         id: response.data.user_id.toString(),
-        email: '', // Django doesn't return email in validate-token response
-        name: response.data.username,
+        email: response.data.email,
       };
       return { success: true, data: transformedData };
     }

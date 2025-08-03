@@ -1,4 +1,5 @@
 import { ApiService } from './services/api';
+import { ErrorHandler } from './services/errorHandler';
 import { StorageService } from './services/storage';
 import { User } from './types';
 
@@ -19,7 +20,8 @@ class PopupManager {
       this.setupEventListeners();
     } catch (error) {
       console.error('Error initializing popup:', error);
-      this.showError('Failed to initialize extension');
+      const errorMessage = ErrorHandler.getErrorMessage(error, 'initialization');
+      this.showError(errorMessage);
     }
   }
 
@@ -35,15 +37,22 @@ class PopupManager {
         this.showDashboard();
       } else {
         // Token exists but no user data, try to fetch user
-        const response = await this.apiService.getCurrentUser();
-        if (response.success && response.data) {
-          this.currentUser = response.data;
-          await this.storageService.setUserData(response.data);
-          this.showDashboard();
-        } else {
-          // Invalid token, clear it
-          await this.storageService.clearAuthToken();
-          this.showLogin();
+        try {
+          const response = await this.apiService.getCurrentUser();
+          if (response.success && response.data) {
+            this.currentUser = response.data;
+            await this.storageService.setUserData(response.data);
+            this.showDashboard();
+          } else {
+            // Invalid token, clear it
+            await this.storageService.clearAuthToken();
+            this.showLogin();
+          }
+        } catch (error) {
+          console.error('Error validating token:', error);
+          // If we can't connect to server, show error instead of login
+          const errorMessage = ErrorHandler.getErrorMessage(error, 'token validation');
+          this.showError(errorMessage);
         }
       }
     } else {
@@ -97,18 +106,25 @@ class PopupManager {
   private async handleLogin(e: Event): Promise<void> {
     e.preventDefault();
 
-    const username = (document.getElementById('loginUsername') as HTMLInputElement).value;
+    const email = (document.getElementById('loginEmail') as HTMLInputElement).value;
     const password = (document.getElementById('loginPassword') as HTMLInputElement).value;
 
-    if (!username || !password) {
-      this.showError('Please fill in all fields');
+    if (!email || !password) {
+      this.showLoginError('Please fill in all fields');
+      return;
+    }
+
+    // Simple email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      this.showLoginError('Please enter a valid email address');
       return;
     }
 
     this.showLoading();
 
     try {
-      const response = await this.apiService.login(username, password);
+      const response = await this.apiService.login(email, password);
 
       if (response.success && response.data) {
         const { token, user } = response.data;
@@ -124,33 +140,48 @@ class PopupManager {
 
         this.showDashboard();
       } else {
-        this.showError(response.error || 'Login failed');
+        // Handle specific error messages - go back to login screen
         this.showLogin();
+        const errorMessage = ErrorHandler.getErrorMessage(response.error, 'login');
+        this.showLoginError(errorMessage);
       }
     } catch (error) {
       console.error('Login error:', error);
-      this.showError('An error occurred during login');
+      // Go back to login screen and show error
       this.showLogin();
+      const errorMessage = ErrorHandler.getErrorMessage(error, 'login');
+      this.showLoginError(errorMessage);
     }
   }
 
   private async handleSignup(e: Event): Promise<void> {
     e.preventDefault();
 
-    const name = (document.getElementById('signupName') as HTMLInputElement).value;
-    const username = (document.getElementById('signupUsername') as HTMLInputElement).value;
     const email = (document.getElementById('signupEmail') as HTMLInputElement).value;
     const password = (document.getElementById('signupPassword') as HTMLInputElement).value;
+    const confirmPassword = (document.getElementById('signupConfirmPassword') as HTMLInputElement).value;
 
-    if (!name || !username || !email || !password) {
-      this.showError('Please fill in all fields');
+    if (!email || !password || !confirmPassword) {
+      this.showSignupError('Please fill in all fields');
+      return;
+    }
+
+    // Simple email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      this.showSignupError('Please enter a valid email address');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      this.showSignupError('Passwords do not match');
       return;
     }
 
     this.showLoading();
 
     try {
-      const response = await this.apiService.signup(username, email, password, name);
+      const response = await this.apiService.signup(email, password);
 
       if (response.success && response.data) {
         const { token, user } = response.data;
@@ -166,13 +197,17 @@ class PopupManager {
 
         this.showDashboard();
       } else {
-        this.showError(response.error || 'Signup failed');
+        // Handle specific error messages - go back to signup screen
         this.showSignup();
+        const errorMessage = ErrorHandler.getErrorMessage(response.error, 'signup');
+        this.showSignupError(errorMessage);
       }
     } catch (error) {
       console.error('Signup error:', error);
-      this.showError('An error occurred during signup');
+      // Go back to signup screen and show error
       this.showSignup();
+      const errorMessage = ErrorHandler.getErrorMessage(error, 'signup');
+      this.showSignupError(errorMessage);
     }
   }
 
@@ -215,6 +250,7 @@ class PopupManager {
     if (loginForm) {
       loginForm.reset();
     }
+    this.clearLoginError();
   }
 
   private showSignup(): void {
@@ -224,16 +260,11 @@ class PopupManager {
     if (signupForm) {
       signupForm.reset();
     }
+    this.clearSignupError();
   }
 
   private showDashboard(): void {
     this.showScreen('dashboard');
-
-    // Update user name
-    const userNameElement = document.getElementById('userName');
-    if (userNameElement && this.currentUser) {
-      userNameElement.textContent = this.currentUser.name;
-    }
   }
 
   private showError(message: string): void {
@@ -241,6 +272,38 @@ class PopupManager {
     const errorMessageElement = document.getElementById('errorMessage');
     if (errorMessageElement) {
       errorMessageElement.textContent = message;
+    }
+  }
+
+  private showSignupError(message: string): void {
+    const errorElement = document.getElementById('signupError');
+    if (errorElement) {
+      errorElement.textContent = message;
+      errorElement.classList.remove('hidden');
+    }
+  }
+
+  private showLoginError(message: string): void {
+    const errorElement = document.getElementById('loginError');
+    if (errorElement) {
+      errorElement.textContent = message;
+      errorElement.classList.remove('hidden');
+    }
+  }
+
+  private clearSignupError(): void {
+    const errorElement = document.getElementById('signupError');
+    if (errorElement) {
+      errorElement.textContent = '';
+      errorElement.classList.add('hidden');
+    }
+  }
+
+  private clearLoginError(): void {
+    const errorElement = document.getElementById('loginError');
+    if (errorElement) {
+      errorElement.textContent = '';
+      errorElement.classList.add('hidden');
     }
   }
 }
