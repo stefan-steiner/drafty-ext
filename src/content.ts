@@ -128,7 +128,7 @@ class ContentScript {
       border-radius: 12px;
       padding: 24px;
       z-index: 10001;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Inter', system-ui, sans-serif;
       font-size: 14px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.15);
       width: 90vw;
@@ -139,15 +139,35 @@ class ContentScript {
 
     // Create popup content
     const title = document.createElement('h3');
-    title.textContent = `${data.full_name || playerName}`;
     title.style.cssText = `
       margin: 0 0 20px 0;
       color: #1a1a1a;
       font-size: 24px;
       font-weight: 800;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Inter', system-ui, sans-serif;
       line-height: 1.2;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     `;
+
+    // Left side - Player name
+    const titleText = document.createElement('span');
+    titleText.textContent = `${data.full_name || playerName}`;
+
+    // Right side - Drafty logo
+    const logoContainer = document.createElement('div');
+    const svgUrl = chrome.runtime.getURL('assets/drafty_logo_blue.svg');
+    const img = document.createElement('img');
+    img.src = svgUrl;
+    img.style.cssText = `
+      width: 110px;
+      height: 45px;
+    `;
+    logoContainer.appendChild(img);
+
+    title.appendChild(titleText);
+    title.appendChild(logoContainer);
 
     const content = document.createElement('div');
 
@@ -160,7 +180,7 @@ class ContentScript {
       padding: 16px;
       line-height: 1.2;
       color: #444;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Inter', system-ui, sans-serif;
     `;
 
     let basicInfoHtml = '';
@@ -253,7 +273,7 @@ class ContentScript {
         font-size: 16px;
         color: #333;
         padding: 16px 16px 12px 16px;
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-family: 'Inter', system-ui, sans-serif;
         display: flex;
         align-items: center;
         gap: 8px;
@@ -276,7 +296,7 @@ class ContentScript {
         padding: 0 16px 16px 16px;
         line-height: 1.6;
         color: #444;
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-family: 'Inter', system-ui, sans-serif;
       `;
 
       const formattedContent = formatBulletPoints(content);
@@ -356,14 +376,14 @@ class ContentScript {
       padding: 12px 24px;
       cursor: pointer;
       font-size: 14px;
-      font-weight: 500;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-weight: 600;
+      font-family: 'Inter', system-ui, sans-serif;
       transition: all 0.2s ease;
       margin-top: 16px;
     `;
 
     closeButton.addEventListener('mouseenter', () => {
-      closeButton.style.background = '#0099cc';
+      closeButton.style.background = '#00008B';
     });
 
     closeButton.addEventListener('mouseleave', () => {
@@ -392,15 +412,6 @@ class ContentScript {
       popup.remove();
       overlay.remove();
       document.removeEventListener('keydown', handleEscape);
-
-      // Clean up CSS styles if no other popups are open
-      const remainingPopups = document.querySelectorAll('.drafty-popup');
-      if (remainingPopups.length === 0) {
-        const bulletStyles = document.querySelector('#drafty-bullet-styles');
-        if (bulletStyles) {
-          bulletStyles.remove();
-        }
-      }
     });
 
     // Add click outside to close
@@ -409,15 +420,6 @@ class ContentScript {
         popup.remove();
         overlay.remove();
         document.removeEventListener('keydown', handleEscape);
-
-        // Clean up CSS styles if no other popups are open
-        const remainingPopups = document.querySelectorAll('.drafty-popup');
-        if (remainingPopups.length === 0) {
-          const bulletStyles = document.querySelector('#drafty-bullet-styles');
-          if (bulletStyles) {
-            bulletStyles.remove();
-          }
-        }
       }
     });
 
@@ -427,15 +429,6 @@ class ContentScript {
         popup.remove();
         overlay.remove();
         document.removeEventListener('keydown', handleEscape);
-
-        // Clean up CSS styles if no other popups are open
-        const remainingPopups = document.querySelectorAll('.drafty-popup');
-        if (remainingPopups.length === 0) {
-          const bulletStyles = document.querySelector('#drafty-bullet-styles');
-          if (bulletStyles) {
-            bulletStyles.remove();
-          }
-        }
       }
     };
     document.addEventListener('keydown', handleEscape);
@@ -470,7 +463,7 @@ class ContentScript {
       border-radius: 12px;
       padding: 24px;
       z-index: 10001;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Inter', system-ui, sans-serif;
       font-size: 14px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.3);
       max-width: 500px;
@@ -584,7 +577,7 @@ class ContentScript {
       padding: 12px 16px;
       border-radius: 4px;
       z-index: 10000;
-      font-family: Arial, sans-serif;
+      font-family: 'Inter', system-ui, sans-serif;
       font-size: 14px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     `;
@@ -639,7 +632,7 @@ class ContentScript {
       padding: 15px;
       cursor: pointer;
       z-index: 10000;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Inter', system-ui, sans-serif;
       font-size: 14px;
       font-weight: 600;
       box-shadow: 0 4px 20px rgba(0,0,0,0.3);
@@ -863,7 +856,7 @@ class ContentScript {
     text.style.cssText = `
       color: white;
       margin-top: 20px;
-      font-family: Arial, sans-serif;
+      font-family: 'Inter', system-ui, sans-serif;
       font-size: 16px;
     `;
 
@@ -939,35 +932,58 @@ class ContentScript {
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background: white;
-      border: 1px solid #ccc;
+      background: #f5f5f5;
+      border: 1px solid #e0e0e0;
       border-radius: 12px;
       padding: 24px;
       z-index: 10001;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Inter', system-ui, sans-serif;
       font-size: 14px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-      max-width: 900px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+      width: 50vw;
+      max-width: 1200px;
       max-height: 80vh;
       overflow-y: auto;
     `;
 
     // Create popup content
     const title = document.createElement('h3');
-    title.textContent = `Pick Assistant - Recommendations`;
     title.style.cssText = `
       margin: 0 0 20px 0;
-      color: #333;
-      font-size: 20px;
-      border-bottom: 2px solid #667eea;
-      padding-bottom: 12px;
+      color: #1a1a1a;
+      font-size: 24px;
+      font-weight: 800;
+      font-family: 'Inter', system-ui, sans-serif;
+      line-height: 1.2;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     `;
+
+    // Left side - "Top 3 Picks"
+    const titleText = document.createElement('span');
+    titleText.textContent = 'Top 3 Picks';
+
+    // Right side - Drafty logo
+    const logoContainer = document.createElement('div');
+    const svgUrl = chrome.runtime.getURL('assets/drafty_logo_blue.svg');
+    const img = document.createElement('img');
+    img.src = svgUrl;
+    img.style.cssText = `
+      width: 110px;
+      height: 45px;
+    `;
+    logoContainer.appendChild(img);
+
+    title.appendChild(titleText);
+    title.appendChild(logoContainer);
 
     const content = document.createElement('div');
     content.style.cssText = `
-      display: flex;
-      flex-direction: column;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
       gap: 16px;
+      margin-bottom: 20px;
     `;
 
     // Handle pick assistant response data
@@ -984,24 +1000,25 @@ class ContentScript {
 
         const optionDiv = document.createElement('div');
         optionDiv.style.cssText = `
-          padding: 16px;
-          border: 2px solid #e0e0e0;
+          background: white;
           border-radius: 8px;
-          background: #f8f9fa;
-          position: relative;
-          cursor: default;
-          text-align: center;
+          overflow: hidden;
           transition: background-color 0.2s ease;
+          border: 2px solid transparent;
+          padding: 16px;
+          min-height: 200px;
+          display: flex;
+          flex-direction: column;
         `;
 
         // Player name
         const playerName = document.createElement('div');
         playerName.style.cssText = `
           font-weight: 700;
-          font-size: 16px;
+          font-size: 18px;
           color: #333;
           margin-bottom: 12px;
-          text-align: center;
+          font-family: 'Inter', system-ui, sans-serif;
         `;
         playerName.textContent = option.data.name;
         optionDiv.appendChild(playerName);
@@ -1010,21 +1027,23 @@ class ContentScript {
         if (option.data.reason) {
           const reasonDiv = document.createElement('div');
           reasonDiv.style.cssText = `
-            color: #666;
+            color: #444;
             font-size: 14px;
-            line-height: 1.4;
-            text-align: left;
+            line-height: 1.6;
+            font-family: 'Inter', system-ui, sans-serif;
+            flex-grow: 1;
           `;
           reasonDiv.textContent = option.data.reason;
           optionDiv.appendChild(reasonDiv);
         }
 
+        // Add hover effect
         optionDiv.addEventListener('mouseenter', () => {
-          optionDiv.style.background = '#f5f5f5';
+          optionDiv.style.border = '2px solid #00BFFF';
         });
 
         optionDiv.addEventListener('mouseleave', () => {
-          optionDiv.style.background = 'white';
+          optionDiv.style.border = '2px solid transparent';
         });
 
         content.appendChild(optionDiv);
@@ -1042,24 +1061,25 @@ class ContentScript {
     const closeButton = document.createElement('button');
     closeButton.textContent = 'Close';
     closeButton.style.cssText = `
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: #00BFFF;
       color: white;
       border: none;
-      border-radius: 6px;
-      padding: 10px 20px;
+      border-radius: 8px;
+      padding: 12px 24px;
       cursor: pointer;
       font-size: 14px;
       font-weight: 600;
-      transition: all 0.3s ease;
-      margin-top: 20px;
+      font-family: 'Inter', system-ui, sans-serif;
+      transition: all 0.2s ease;
+      margin-top: 16px;
     `;
 
     closeButton.addEventListener('mouseenter', () => {
-      closeButton.style.transform = 'scale(1.02)';
+      closeButton.style.background = '#00008B';
     });
 
     closeButton.addEventListener('mouseleave', () => {
-      closeButton.style.transform = 'scale(1)';
+      closeButton.style.background = '#00BFFF';
     });
 
     // Add overlay first (before event handlers that reference it)
@@ -1070,7 +1090,7 @@ class ContentScript {
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0,0,0,0.4);
       z-index: 10000;
     `;
 
