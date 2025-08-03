@@ -107,7 +107,14 @@ export class YahooParser extends BaseParser {
       return [];
     }
 
-    return Array.from(playerRows).map(row => new YahooPlayerRow(row));
+    // Convert to array and sort by vertical position (top to bottom)
+    const sortedRows = Array.from(playerRows).sort((a, b) => {
+      const rectA = a.getBoundingClientRect();
+      const rectB = b.getBoundingClientRect();
+      return rectA.top - rectB.top;
+    });
+
+    return sortedRows.map(row => new YahooPlayerRow(row));
   }
 
   private findPlayerListingTable(): HTMLElement | null {
@@ -146,8 +153,8 @@ export class YahooParser extends BaseParser {
       return;
     }
 
-    // Scroll down by 100px or to the bottom, whichever is smaller
-    const scrollAmount = Math.min(100, scrollHeight - currentScrollTop - clientHeight);
+    // Scroll down by 1px or to the bottom, whichever is smaller
+    const scrollAmount = Math.min(1, scrollHeight - currentScrollTop - clientHeight);
 
     table.scrollTo({
       top: currentScrollTop + scrollAmount,
@@ -234,8 +241,10 @@ export class YahooParser extends BaseParser {
     // Step 5: Scroll back to top
     await this.scrollToTop();
 
-    console.log(`Yahoo Parser: Final collection: ${playerNames.length} player names`);
-    return playerNames;
+    // Step 6: Return exactly the first requiredCount players
+    const finalNames = playerNames.slice(0, requiredCount);
+    console.log(`Yahoo Parser: Final collection: ${finalNames.length} player names`);
+    return finalNames;
   }
 
   private findMyTeamTableContainer(): HTMLElement | null {

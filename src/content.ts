@@ -87,13 +87,14 @@ class ContentScript {
       return;
     }
 
-    try {
-      const token = await this.storageService.getAuthToken();
-      if (!token) {
-        this.showError('Please log in to get player insights');
-        return;
-      }
+    // Check authentication first
+    const token = await this.storageService.getAuthToken();
+    if (!token) {
+      this.showAuthPopup();
+      return;
+    }
 
+    try {
       const response = await this.apiService.getPlayerDataByName(playerName, 'standard');
 
       if (response.success && response.data) {
@@ -252,32 +253,7 @@ class ContentScript {
       closeButton.style.background = '#00BFFF';
     });
 
-    closeButton.addEventListener('click', () => {
-      popup.remove();
-    });
-
-    // Add click outside to close
-    popup.addEventListener('click', (e) => {
-      if (e.target === popup) {
-        popup.remove();
-      }
-    });
-
-    // Add escape key to close
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        popup.remove();
-        document.removeEventListener('keydown', handleEscape);
-      }
-    };
-    document.addEventListener('keydown', handleEscape);
-
-    // Assemble popup
-    popup.appendChild(title);
-    popup.appendChild(content);
-    popup.appendChild(closeButton);
-
-    // Add overlay
+    // Add overlay first (before event handlers that reference it)
     const overlay = document.createElement('div');
     overlay.style.cssText = `
       position: fixed;
@@ -294,6 +270,36 @@ class ContentScript {
       popup.remove();
       document.removeEventListener('keydown', handleEscape);
     });
+
+    closeButton.addEventListener('click', () => {
+      popup.remove();
+      overlay.remove();
+      document.removeEventListener('keydown', handleEscape);
+    });
+
+    // Add click outside to close
+    popup.addEventListener('click', (e) => {
+      if (e.target === popup) {
+        popup.remove();
+        overlay.remove();
+        document.removeEventListener('keydown', handleEscape);
+      }
+    });
+
+    // Add escape key to close
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        popup.remove();
+        overlay.remove();
+        document.removeEventListener('keydown', handleEscape);
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+
+    // Assemble popup
+    popup.appendChild(title);
+    popup.appendChild(content);
+    popup.appendChild(closeButton);
 
     // Add to DOM
     document.body.appendChild(overlay);
@@ -362,8 +368,8 @@ class ContentScript {
       background: #00BFFF;
       color: white;
       border: none;
-      border-radius: 50px;
-      padding: 20px 24px;
+      border-radius: 8px;
+      padding: 15px;
       cursor: pointer;
       z-index: 10000;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -470,6 +476,13 @@ class ContentScript {
   }
 
   private async handleFloatingButtonClick(): Promise<void> {
+    // Check authentication first
+    const token = await this.storageService.getAuthToken();
+    if (!token) {
+      this.showAuthPopup();
+      return;
+    }
+
     try {
       console.log('🚀 Floating button clicked, starting player collection...');
 
@@ -782,32 +795,7 @@ class ContentScript {
       closeButton.style.transform = 'scale(1)';
     });
 
-    closeButton.addEventListener('click', () => {
-      popup.remove();
-    });
-
-    // Add click outside to close
-    popup.addEventListener('click', (e) => {
-      if (e.target === popup) {
-        popup.remove();
-      }
-    });
-
-    // Add escape key to close
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        popup.remove();
-        document.removeEventListener('keydown', handleEscape);
-      }
-    };
-    document.addEventListener('keydown', handleEscape);
-
-    // Assemble popup
-    popup.appendChild(title);
-    popup.appendChild(content);
-    popup.appendChild(closeButton);
-
-    // Add overlay
+    // Add overlay first (before event handlers that reference it)
     const overlay = document.createElement('div');
     overlay.style.cssText = `
       position: fixed;
@@ -825,6 +813,159 @@ class ContentScript {
       document.removeEventListener('keydown', handleEscape);
     });
 
+    closeButton.addEventListener('click', () => {
+      popup.remove();
+      overlay.remove();
+      document.removeEventListener('keydown', handleEscape);
+    });
+
+    // Add click outside to close
+    popup.addEventListener('click', (e) => {
+      if (e.target === popup) {
+        popup.remove();
+        overlay.remove();
+        document.removeEventListener('keydown', handleEscape);
+      }
+    });
+
+    // Add escape key to close
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        popup.remove();
+        overlay.remove();
+        document.removeEventListener('keydown', handleEscape);
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+
+    // Assemble popup
+    popup.appendChild(title);
+    popup.appendChild(content);
+    popup.appendChild(closeButton);
+
+    // Add to DOM
+    document.body.appendChild(overlay);
+    document.body.appendChild(popup);
+  }
+
+  private showAuthPopup(): void {
+    // Remove any existing popup
+    const existingPopup = document.querySelector('.drafty-auth-popup');
+    if (existingPopup) {
+      existingPopup.remove();
+    }
+
+    // Create popup container
+    const popup = document.createElement('div');
+    popup.className = 'drafty-auth-popup';
+    popup.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 12px;
+      padding: 24px;
+      z-index: 10001;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+      max-width: 500px;
+      text-align: center;
+    `;
+
+    // Create popup content
+    const title = document.createElement('h3');
+    title.textContent = 'Authentication Required';
+    title.style.cssText = `
+      margin: 0 0 20px 0;
+      color: #333;
+      font-size: 20px;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 12px;
+    `;
+
+    const message = document.createElement('div');
+    message.style.cssText = `
+      color: #666;
+      font-size: 16px;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    `;
+    message.textContent = 'You are not signed in. Please sign in to Drafty by clicking the extension (puzzle piece) icon in the top-right of your chrome window. Then select the Drafty extension from the list.';
+
+    // Create close button
+    const closeButton = document.createElement('button');
+    closeButton.textContent = 'Close';
+    closeButton.style.cssText = `
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 20px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    `;
+
+    closeButton.addEventListener('mouseenter', () => {
+      closeButton.style.transform = 'scale(1.02)';
+    });
+
+    closeButton.addEventListener('mouseleave', () => {
+      closeButton.style.transform = 'scale(1)';
+    });
+
+    // Add overlay first (before event handlers that reference it)
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 10000;
+    `;
+
+    overlay.addEventListener('click', () => {
+      overlay.remove();
+      popup.remove();
+      document.removeEventListener('keydown', handleEscape);
+    });
+
+    closeButton.addEventListener('click', () => {
+      popup.remove();
+      overlay.remove();
+      document.removeEventListener('keydown', handleEscape);
+    });
+
+    // Add click outside to close
+    popup.addEventListener('click', (e) => {
+      if (e.target === popup) {
+        popup.remove();
+        overlay.remove();
+        document.removeEventListener('keydown', handleEscape);
+      }
+    });
+
+    // Add escape key to close
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        popup.remove();
+        overlay.remove();
+        document.removeEventListener('keydown', handleEscape);
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+
+    // Assemble popup
+    popup.appendChild(title);
+    popup.appendChild(message);
+    popup.appendChild(closeButton);
+
     // Add to DOM
     document.body.appendChild(overlay);
     document.body.appendChild(popup);
@@ -840,6 +981,16 @@ class ContentScript {
     const existingPopup = document.querySelector('.drafty-popup');
     if (existingPopup) {
       existingPopup.remove();
+    }
+
+    const existingBulkPopup = document.querySelector('.drafty-bulk-popup');
+    if (existingBulkPopup) {
+      existingBulkPopup.remove();
+    }
+
+    const existingAuthPopup = document.querySelector('.drafty-auth-popup');
+    if (existingAuthPopup) {
+      existingAuthPopup.remove();
     }
 
     const existingOverlay = document.querySelector('div[style*="rgba(0,0,0,0.5)"]');

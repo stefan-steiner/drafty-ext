@@ -1,5 +1,6 @@
 import { PlayerRow, SiteParser } from '../types';
 import { ESPNParser } from './espn-parser';
+import { SleeperParser } from './sleeper-parser';
 import { YahooParser } from './yahoo-parser';
 
 export class ParserManager {
@@ -21,9 +22,9 @@ export class ParserManager {
     // Register all available parsers
     this.parsers.push(new ESPNParser());
     this.parsers.push(new YahooParser());
+    this.parsers.push(new SleeperParser());
 
     // Future parsers can be added here:
-    // this.parsers.push(new SleeperParser());
     // this.parsers.push(new NFLParser());
   }
 

@@ -11,6 +11,7 @@
   "host_permissions": [
     "https://fantasy.espn.com/*",
     "https://football.fantasysports.yahoo.com/*",
+    "https://sleeper.com/*",
     "https://api.drafty.com/*"
   ],
   "background": {
@@ -20,7 +21,8 @@
     {
       "matches": [
         "https://fantasy.espn.com/football/draft*",
-        "https://football.fantasysports.yahoo.com/draftclient/*"
+        "https://football.fantasysports.yahoo.com/draftclient/*",
+        "https://sleeper.com/draft/*"
       ],
       "js": ["content.js"],
       "run_at": "document_end"
@@ -31,7 +33,8 @@
       "resources": ["assets/*"],
       "matches": [
         "https://fantasy.espn.com/*",
-        "https://football.fantasysports.yahoo.com/*"
+        "https://football.fantasysports.yahoo.com/*",
+        "https://sleeper.com/*"
       ]
     }
   ],

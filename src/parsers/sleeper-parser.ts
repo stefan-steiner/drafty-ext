@@ -1,10 +1,10 @@
 import { PlayerRow } from '../types';
 import { BaseParser } from './base-parser';
 
-// ESPN-specific constants
-const PLAYER_NAME_SELECTOR = '.playerinfo__playername';
+// Sleeper-specific constants
+const PLAYER_NAME_SELECTOR = '.name-wrapper';
 
-export class ESPNPlayerRow implements PlayerRow {
+export class SleeperPlayerRow implements PlayerRow {
   constructor(public root: HTMLElement) {}
 
   getName(): string {
@@ -20,7 +20,9 @@ export class ESPNPlayerRow implements PlayerRow {
     const buttons = clonedElement.querySelectorAll('.drafty-action-btn');
     buttons.forEach(btn => btn.remove());
 
-    return clonedElement.textContent?.trim() || '';
+    // Get just the player name (first text node, before the position div)
+    const textContent = clonedElement.childNodes[0]?.textContent?.trim() || '';
+    return textContent;
   }
 
   addActionButton(callback: () => void): void {
@@ -82,78 +84,56 @@ export class ESPNPlayerRow implements PlayerRow {
       callback();
     });
 
-    // Place button in the flex container or next to the name element
-    const flexContainer = nameElement.closest('.flex');
-    if (flexContainer && !flexContainer.querySelector('.drafty-action-btn')) {
-      flexContainer.appendChild(button);
-    } else {
-      const parent = nameElement.parentElement;
-      if (parent && !parent.querySelector('.drafty-action-btn')) {
-        parent.insertBefore(button, nameElement.nextSibling);
-      }
-    }
+    // Insert button after the name element
+    nameElement.parentElement?.insertBefore(button, nameElement.nextSibling);
   }
 }
 
-export class ESPNParser extends BaseParser {
-  name = 'ESPN';
+export class SleeperParser extends BaseParser {
+  name = 'Sleeper';
 
   canParse(url: string): boolean {
-    return url.includes('fantasy.espn.com/football/draft');
+    return url.startsWith("https://sleeper.com/draft");
   }
 
   getPlayerRows(): PlayerRow[] {
-    const playersSection = document.querySelector<HTMLElement>('.draft-players');
+    const playersSection = document.querySelector<HTMLElement>('.draft-rankings');
     if (!playersSection) {
       return [];
     }
 
-    // Find all player name elements
-    const playerNameElements = playersSection.querySelectorAll<HTMLElement>(PLAYER_NAME_SELECTOR);
-    if (playerNameElements.length === 0) {
+    // Find all player rank items
+    const playerRows = playersSection.querySelectorAll<HTMLElement>('.player-rank-item2');
+    if (playerRows.length === 0) {
       return [];
     }
 
-    // Get row elements that contain player names, preserving order
-    const playerRows: HTMLElement[] = [];
-
-    playerNameElements.forEach(nameElement => {
-      const rowElement = nameElement.closest('[role="row"]') ||
-                        nameElement.closest('tr') ||
-                        nameElement.closest('[class*="row"]') ||
-                        nameElement.closest('div[class*="row"]');
-
-      if (rowElement) {
-        playerRows.push(rowElement as HTMLElement);
-      }
-    });
-
-    // Sort player rows by their vertical position (top to bottom)
-    playerRows.sort((a, b) => {
+    // Convert to array and sort by vertical position (top to bottom)
+    const sortedRows = Array.from(playerRows).sort((a, b) => {
       const rectA = a.getBoundingClientRect();
       const rectB = b.getBoundingClientRect();
       return rectA.top - rectB.top;
     });
 
-    return playerRows.map(row => new ESPNPlayerRow(row));
+    return sortedRows.map(row => new SleeperPlayerRow(row));
   }
 
   private findScrollbar(): HTMLElement | null {
-    const playersSection = document.querySelector<HTMLElement>('.draft-players');
+    const playersSection = document.querySelector<HTMLElement>('.draft-rankings');
     if (!playersSection) {
       return null;
     }
 
-    return playersSection.querySelector<HTMLElement>('.ScrollbarLayout_main.ScrollbarLayout_mainVertical.public_Scrollbar_main');
+    return playersSection.querySelector<HTMLElement>('.ps__rail-y');
   }
 
   private findScrollbarFace(): HTMLElement | null {
-    const playersSection = document.querySelector<HTMLElement>('.draft-players');
+    const playersSection = document.querySelector<HTMLElement>('.draft-rankings');
     if (!playersSection) {
       return null;
     }
 
-    return playersSection.querySelector<HTMLElement>('.ScrollbarLayout_face.ScrollbarLayout_faceVertical.public_Scrollbar_face');
+    return playersSection.querySelector<HTMLElement>('.ps__thumb-y');
   }
 
   private async scrollToTop(): Promise<void> {
@@ -268,7 +248,7 @@ export class ESPNParser extends BaseParser {
   }
 
   async getAvailableNames(requiredCount: number): Promise<string[]> {
-    console.log(`ESPN Parser: Getting ${requiredCount} available player names`);
+    console.log(`Sleeper Parser: Getting ${requiredCount} available player names`);
 
     // Step 2: Scroll to top
     await this.scrollToTop();
@@ -290,7 +270,7 @@ export class ESPNParser extends BaseParser {
         }
       });
 
-      console.log(`ESPN Parser: Found ${playerNames.length} unique player names (needed ${requiredCount})`);
+      console.log(`Sleeper Parser: Found ${playerNames.length} unique player names (needed ${requiredCount})`);
 
       // If we have enough players, break
       if (playerNames.length >= requiredCount) {
@@ -311,173 +291,94 @@ export class ESPNParser extends BaseParser {
 
     // Step 6: Return exactly the first requiredCount players
     const finalNames = playerNames.slice(0, requiredCount);
-    console.log(`ESPN Parser: Final collection: ${finalNames.length} player names`);
+    console.log(`Sleeper Parser: Final collection: ${finalNames.length} player names`);
     return finalNames;
   }
 
-  private findDraftedRosterSection(): HTMLElement | null {
-    // Find roster section using roster or roster-module classes
-    const rosterSection = document.querySelector<HTMLElement>('.roster, .roster-module');
+  private findDraftRosterSection(): HTMLElement | null {
+    // First try to find the draft-roster2-teams directly
+    let rosterSection = document.querySelector<HTMLElement>('.draft-roster2-teams');
+
     if (!rosterSection) {
-      return null;
+      // If not found, look for the Roster tab and click it
+      const tabElements = document.querySelectorAll<HTMLElement>('.round-tab .tab .text-wrapper');
+      for (const tabElement of tabElements) {
+        if (tabElement.textContent?.trim() === 'Roster') {
+          const tabButton = tabElement.closest('.round-tab') as HTMLElement;
+          if (tabButton) {
+            tabButton.click();
+            // Wait a bit for the content to load
+            setTimeout(() => {
+              rosterSection = document.querySelector<HTMLElement>('.draft-roster2-teams');
+            }, 500);
+            break;
+          }
+        }
+      }
     }
 
-    // Ensure we're in the right section by checking for the inner-column within draft-column
-    const draftColumn = rosterSection.closest('.draft-column');
-    if (!draftColumn) {
-      return null;
-    }
-
-    const innerColumn = draftColumn.querySelector<HTMLElement>('.inner-column');
-    if (!innerColumn) {
-      return null;
-    }
-
-    return innerColumn;
+    return rosterSection;
   }
 
   private findDraftedPlayerElements(): HTMLElement[] {
-    const rosterSection = this.findDraftedRosterSection();
+    const rosterSection = this.findDraftRosterSection();
     if (!rosterSection) {
       return [];
     }
 
-    // Find all player column elements that have a title attribute (indicating they have a player)
-    const playerElements = rosterSection.querySelectorAll<HTMLElement>('div[class*="table--cell player-column"][title]');
-
+    // Find all player data elements (not empty ones)
+    const playerElements = rosterSection.querySelectorAll<HTMLElement>('.player-data');
     return Array.from(playerElements);
   }
 
   private getCurrentDraftedNames(): string[] {
     const playerElements = this.findDraftedPlayerElements();
-    const playerNames: string[] = [];
+    const draftedPlayers: string[] = [];
 
     for (const element of playerElements) {
-      const title = element.getAttribute('title');
-      if (title && title.trim()) {
-        playerNames.push(title.trim());
+      // Extract name from the .name element
+      const nameElement = element.querySelector<HTMLElement>('.name');
+      const name = nameElement?.textContent?.trim() || '';
+
+      if (name) {
+        draftedPlayers.push(name);
       }
     }
 
-    return playerNames;
-  }
-
-  private async scrollDraftedToTop(): Promise<void> {
-    const innerColumn = this.findDraftedRosterSection();
-    if (!innerColumn) {
-      return;
-    }
-
-    // Use smooth scrolling to top
-    innerColumn.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
-
-    // Wait for scroll to complete
-    await new Promise(resolve => setTimeout(resolve, 300));
-  }
-
-  private async scrollDraftedDown(): Promise<void> {
-    const innerColumn = this.findDraftedRosterSection();
-    if (!innerColumn) {
-      return;
-    }
-
-    // Scroll down by a small amount
-    const currentScrollTop = innerColumn.scrollTop;
-    const scrollHeight = innerColumn.scrollHeight;
-    const clientHeight = innerColumn.clientHeight;
-
-    // If we're at the bottom, don't scroll further
-    if (currentScrollTop + clientHeight >= scrollHeight) {
-      return;
-    }
-
-    // Scroll down by 100px or to the bottom, whichever is smaller
-    const scrollAmount = Math.min(100, scrollHeight - currentScrollTop - clientHeight);
-
-    innerColumn.scrollTo({
-      top: currentScrollTop + scrollAmount,
-      behavior: 'smooth'
-    });
-
-    // Wait for scroll to complete
-    await new Promise(resolve => setTimeout(resolve, 200));
+    return draftedPlayers;
   }
 
   async getDraftedNames(): Promise<string[]> {
-    console.log(`ESPN Parser: Getting all drafted player names`);
+    console.log(`Sleeper Parser: Getting all drafted player names`);
 
-    // Step 1: Check if the section is scrollable
-    const innerColumn = this.findDraftedRosterSection();
-    if (!innerColumn) {
-      console.log(`ESPN Parser: Could not find drafted roster section`);
+    // Step 1: Check if roster section exists or needs to be accessed via tab
+    let rosterSection = this.findDraftRosterSection();
+
+    if (!rosterSection) {
+      // If not found, look for the Roster tab and click it
+      const tabElements = document.querySelectorAll<HTMLElement>('.round-tab .tab .text-wrapper');
+      for (const tabElement of tabElements) {
+        if (tabElement.textContent?.trim() === 'Roster') {
+          const tabButton = tabElement.closest('.round-tab') as HTMLElement;
+          if (tabButton) {
+            tabButton.click();
+            // Wait a bit for the content to load
+            await new Promise(resolve => setTimeout(resolve, 500));
+            rosterSection = document.querySelector<HTMLElement>('.draft-roster2-teams');
+            break;
+          }
+        }
+      }
+    }
+
+    if (!rosterSection) {
+      console.log(`Sleeper Parser: Could not find draft roster section`);
       return [];
     }
 
-    const scrollHeight = innerColumn.scrollHeight;
-    const clientHeight = innerColumn.clientHeight;
-    const isScrollable = scrollHeight > clientHeight;
-
-    console.log(`ESPN Parser: Section scrollable: ${isScrollable} (scrollHeight: ${scrollHeight}, clientHeight: ${clientHeight})`);
-
-    if (!isScrollable) {
-      // If not scrollable, just collect all visible players
-      const playerNames = this.getCurrentDraftedNames();
-      console.log(`ESPN Parser: Non-scrollable section - found ${playerNames.length} player names`);
-      return playerNames;
-    }
-
-    // Step 2: Scroll to top of drafted section
-    await this.scrollDraftedToTop();
-
-    // Step 3: Small delay for DOM update
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    // Step 4: Loop while collecting drafted players until we reach the bottom
-    const playerNames: string[] = [];
-    let attempts = 0;
-    const maxAttempts = 100; // Prevent infinite loops
-    let previousScrollTop = -1;
-
-    while (attempts < maxAttempts) {
-      // Read current drafted player names
-      const currentNames = this.getCurrentDraftedNames();
-      currentNames.forEach(name => {
-        if (!playerNames.includes(name)) {
-          playerNames.push(name);
-        }
-      });
-
-      console.log(`ESPN Parser: Found ${playerNames.length} unique drafted player names`);
-
-      // Scroll down slightly
-      await this.scrollDraftedDown();
-
-      // Check if we've reached the bottom by comparing scroll position
-      const currentScrollTop = innerColumn.scrollTop;
-      const currentScrollHeight = innerColumn.scrollHeight;
-      const currentClientHeight = innerColumn.clientHeight;
-
-      // If we're at the bottom or scroll position hasn't changed, we're done
-      if (currentScrollTop + currentClientHeight >= currentScrollHeight || currentScrollTop === previousScrollTop) {
-        console.log(`ESPN Parser: Reached bottom of drafted section`);
-        break;
-      }
-
-      previousScrollTop = currentScrollTop;
-
-      // Small delay for DOM update
-      await new Promise(resolve => setTimeout(resolve, 200));
-
-      attempts++;
-    }
-
-    // Step 5: Scroll back to top
-    await this.scrollDraftedToTop();
-
-    console.log(`ESPN Parser: Final drafted collection: ${playerNames.length} player names`);
+    // Step 2: Collect all drafted players (no scrolling needed as mentioned)
+    const playerNames = this.getCurrentDraftedNames();
+    console.log(`Sleeper Parser: Found ${playerNames.length} drafted player names`);
     return playerNames;
   }
 
