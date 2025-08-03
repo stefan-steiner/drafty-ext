@@ -123,44 +123,82 @@ class ContentScript {
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background: white;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      padding: 20px;
+      background: #f5f5f5;
+      border: 1px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 24px;
       z-index: 10001;
-      font-family: Arial, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       font-size: 14px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-      max-width: 500px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+      width: 90vw;
+      max-width: 1200px;
       max-height: 80vh;
       overflow-y: auto;
     `;
 
     // Create popup content
     const title = document.createElement('h3');
-    title.textContent = `${data.full_name || playerName} - Player Insights`;
+    title.textContent = `${data.full_name || playerName}`;
     title.style.cssText = `
-      margin: 0 0 15px 0;
-      color: #333;
-      font-size: 18px;
-      border-bottom: 2px solid #007bff;
-      padding-bottom: 8px;
+      margin: 0 0 20px 0;
+      color: #1a1a1a;
+      font-size: 24px;
+      font-weight: 800;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.2;
     `;
 
     const content = document.createElement('div');
 
-    // Add basic player info
+    // Add simplified player info section
     const basicInfo = document.createElement('div');
-    basicInfo.style.cssText = 'margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px;';
+    basicInfo.style.cssText = 'margin-bottom: 8px; background: white; border-radius: 8px; overflow: hidden; transition: background-color 0.2s ease; border: 2px solid transparent;';
+
+    const basicInfoContent = document.createElement('div');
+    basicInfoContent.style.cssText = `
+      padding: 16px;
+      line-height: 1.2;
+      color: #444;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    `;
 
     let basicInfoHtml = '';
-    if (data.position) basicInfoHtml += `<strong>Position:</strong> ${data.position}<br>`;
-    if (data.team) basicInfoHtml += `<strong>Team:</strong> ${data.team}<br>`;
-    if (data.rank) basicInfoHtml += `<strong>Rank:</strong> ${data.rank}<br>`;
-    if (data.adp) basicInfoHtml += `<strong>ADP:</strong> ${data.adp}<br>`;
+    if (data.position) basicInfoHtml += `<div style="margin-bottom: 6px;"><span style="font-size: 14px; font-weight: 600; color: #333;">Position:</span> <span style="font-size: 14px; font-weight: 800; color: #333;">${data.position}</span></div>`;
+    if (data.team) basicInfoHtml += `<div style="margin-bottom: 6px;"><span style="font-size: 14px; font-weight: 600; color: #333;">Team:</span> <span style="font-size: 14px; font-weight: 800; color: #333;">${data.team}</span></div>`;
+    if (data.rank) basicInfoHtml += `<div style="margin-bottom: 6px;"><span style="font-size: 14px; font-weight: 600; color: #333;">Expert Consensus Rank:</span> <span style="font-size: 14px; font-weight: 800; color: #333;">${data.rank}</span></div>`;
+    if (data.adp) basicInfoHtml += `<div style="margin-bottom: 6px;"><span style="font-size: 14px; font-weight: 600; color: #333;">Average Draft Position:</span> <span style="font-size: 14px; font-weight: 800; color: #333;">${data.adp}</span></div>`;
 
-    basicInfo.innerHTML = basicInfoHtml;
+    basicInfoContent.innerHTML = basicInfoHtml;
+    basicInfo.appendChild(basicInfoContent);
+
+    // Add hover effect
+    basicInfo.addEventListener('mouseenter', () => {
+      basicInfo.style.border = '2px solid #333';
+    });
+
+    basicInfo.addEventListener('mouseleave', () => {
+      basicInfo.style.border = '2px solid transparent';
+    });
     content.appendChild(basicInfo);
+
+    // Add CSS to ensure bullet points are always visible
+    if (!document.querySelector('#drafty-bullet-styles')) {
+      const style = document.createElement('style');
+      style.id = 'drafty-bullet-styles';
+      style.textContent = `
+        .drafty-popup ul {
+          list-style-type: disc !important;
+          list-style-position: outside !important;
+          padding-left: 20px !important;
+        }
+        .drafty-popup li {
+          display: list-item !important;
+          margin-bottom: 4px !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
 
     // Helper function to format bullet points
     const formatBulletPoints = (text: string): string => {
@@ -169,62 +207,141 @@ class ContentScript {
       // Split by newlines and filter out empty lines
       const lines = text.split('\n').filter(line => line.trim());
 
-      return lines.map(line => {
-        // If line starts with dash, convert to bullet point
-        if (line.trim().startsWith('-')) {
-          const content = line.trim().substring(1).trim();
-          return `<li>${content}</li>`;
+      // If we have multiple lines and some start with dashes, format as bullet points
+      const hasBulletPoints = lines.some(line => line.trim().startsWith('-'));
+
+      if (hasBulletPoints) {
+        return lines.map(line => {
+          const trimmedLine = line.trim();
+          // If line starts with dash, convert to bullet point
+          if (trimmedLine.startsWith('-')) {
+            const content = trimmedLine.substring(1).trim();
+            return `<li>${content}</li>`;
+          }
+          // If line doesn't start with dash but we're in bullet point mode,
+          // treat as regular paragraph (this handles mixed content)
+          return `<p>${trimmedLine}</p>`;
+        }).join('');
+      } else {
+        // If no bullet points found, try to split by sentences and create bullet points
+        // This handles cases where the LLM returns a paragraph instead of bullet points
+        const sentences = text.split(/[.!?]+/).filter(sentence => sentence.trim().length > 10);
+
+        if (sentences.length > 1) {
+          return sentences.map(sentence => {
+            const trimmed = sentence.trim();
+            if (trimmed) {
+              return `<li>${trimmed}</li>`;
+            }
+            return '';
+          }).join('');
+        } else {
+          // Single paragraph, just return as is
+          return `<p>${text.trim()}</p>`;
         }
-        // Otherwise, treat as regular paragraph
-        return `<p>${line.trim()}</p>`;
-      }).join('');
+      }
+    };
+
+    // Helper function to render content with proper bullet styling and gradient backgrounds
+    const renderContentWithBullets = (title: string, content: string, iconType: string = 'default'): HTMLElement => {
+      const container = document.createElement('div');
+      container.style.cssText = 'margin-bottom: 8px; background: white; border-radius: 8px; overflow: hidden; transition: background-color 0.2s ease; border: 2px solid transparent;';
+
+      const titleDiv = document.createElement('div');
+      titleDiv.style.cssText = `
+        font-weight: 600;
+        font-size: 16px;
+        color: #333;
+        padding: 16px 16px 12px 16px;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      `;
+
+      // Create icon based on type
+      let iconHtml = '';
+      if (iconType === 'upside') {
+        iconHtml = '<span style="color: #28a745; font-size: 14px;">▲</span>';
+      } else if (iconType === 'downside') {
+        iconHtml = '<span style="color: #dc3545; font-size: 14px;">▼</span>';
+      } else if (iconType === 'overview') {
+        iconHtml = '<span style="color: #00BFFF; font-size: 14px;">●</span>';
+      }
+
+      titleDiv.innerHTML = `${iconHtml}<span>${title}</span>`;
+
+      const contentDiv = document.createElement('div');
+      contentDiv.style.cssText = `
+        padding: 0 16px 16px 16px;
+        line-height: 1.6;
+        color: #444;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      `;
+
+      const formattedContent = formatBulletPoints(content);
+
+      if (formattedContent.includes('<li>')) {
+        // Has bullet points - create proper ul with explicit bullet styling
+        const ul = document.createElement('ul');
+        ul.style.cssText = `
+          margin: 0;
+          padding-left: 20px;
+          line-height: 1.6;
+          list-style-type: disc !important;
+          list-style-position: outside;
+        `;
+
+        // Extract li elements and append them to the ul
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = formattedContent;
+        const liElements = tempDiv.querySelectorAll('li');
+        liElements.forEach(li => ul.appendChild(li.cloneNode(true)));
+
+        contentDiv.appendChild(ul);
+      } else {
+        // Regular text
+        contentDiv.innerHTML = formattedContent;
+      }
+
+      container.appendChild(titleDiv);
+      container.appendChild(contentDiv);
+
+      // Add hover effect
+      container.addEventListener('mouseenter', () => {
+        if (iconType === 'overview') {
+          container.style.border = '2px solid #00BFFF';
+        } else if (iconType === 'upside') {
+          container.style.border = '2px solid #28a745';
+        } else if (iconType === 'downside') {
+          container.style.border = '2px solid #dc3545';
+        } else {
+          container.style.border = '2px solid #333';
+        }
+      });
+
+      container.addEventListener('mouseleave', () => {
+        container.style.border = '2px solid transparent';
+      });
+
+      return container;
     };
 
     // Add player overview
     if (data.player_overview) {
-      const overviewDiv = document.createElement('div');
-      overviewDiv.style.cssText = 'margin-bottom: 15px;';
-
-      const formattedOverview = formatBulletPoints(data.player_overview);
-      if (formattedOverview.includes('<li>')) {
-        // Has bullet points
-        overviewDiv.innerHTML = `<strong>Overview:</strong><ul style="margin: 8px 0; padding-left: 20px; line-height: 1.6;">${formattedOverview}</ul>`;
-      } else {
-        // Regular text
-        overviewDiv.innerHTML = `<strong>Overview:</strong><br>${formattedOverview}`;
-      }
+      const overviewDiv = renderContentWithBullets('Overview', data.player_overview, 'overview');
       content.appendChild(overviewDiv);
     }
 
     // Add upside
     if (data.upside) {
-      const upsideDiv = document.createElement('div');
-      upsideDiv.style.cssText = 'margin-bottom: 15px; padding: 10px; background: #d4edda; border-left: 4px solid #28a745; border-radius: 4px;';
-
-      const formattedUpside = formatBulletPoints(data.upside);
-      if (formattedUpside.includes('<li>')) {
-        // Has bullet points
-        upsideDiv.innerHTML = `<strong>Upside:</strong><ul style="margin: 8px 0; padding-left: 20px; line-height: 1.6;">${formattedUpside}</ul>`;
-      } else {
-        // Regular text
-        upsideDiv.innerHTML = `<strong>Upside:</strong><br>${formattedUpside}`;
-      }
+      const upsideDiv = renderContentWithBullets('Upside', data.upside, 'upside');
       content.appendChild(upsideDiv);
     }
 
     // Add downside
     if (data.downside) {
-      const downsideDiv = document.createElement('div');
-      downsideDiv.style.cssText = 'margin-bottom: 15px; padding: 10px; background: #f8d7da; border-left: 4px solid #dc3545; border-radius: 4px;';
-
-      const formattedDownside = formatBulletPoints(data.downside);
-      if (formattedDownside.includes('<li>')) {
-        // Has bullet points
-        downsideDiv.innerHTML = `<strong>Downside:</strong><ul style="margin: 8px 0; padding-left: 20px; line-height: 1.6;">${formattedDownside}</ul>`;
-      } else {
-        // Regular text
-        downsideDiv.innerHTML = `<strong>Downside:</strong><br>${formattedDownside}`;
-      }
+      const downsideDiv = renderContentWithBullets('Downside', data.downside, 'downside');
       content.appendChild(downsideDiv);
     }
 
@@ -233,6 +350,158 @@ class ContentScript {
     closeButton.textContent = 'Close';
     closeButton.style.cssText = `
       background: #00BFFF;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      transition: all 0.2s ease;
+      margin-top: 16px;
+    `;
+
+    closeButton.addEventListener('mouseenter', () => {
+      closeButton.style.background = '#0099cc';
+    });
+
+    closeButton.addEventListener('mouseleave', () => {
+      closeButton.style.background = '#00BFFF';
+    });
+
+    // Add overlay first (before event handlers that reference it)
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.4);
+      z-index: 10000;
+    `;
+
+    overlay.addEventListener('click', () => {
+      overlay.remove();
+      popup.remove();
+      document.removeEventListener('keydown', handleEscape);
+    });
+
+    closeButton.addEventListener('click', () => {
+      popup.remove();
+      overlay.remove();
+      document.removeEventListener('keydown', handleEscape);
+
+      // Clean up CSS styles if no other popups are open
+      const remainingPopups = document.querySelectorAll('.drafty-popup');
+      if (remainingPopups.length === 0) {
+        const bulletStyles = document.querySelector('#drafty-bullet-styles');
+        if (bulletStyles) {
+          bulletStyles.remove();
+        }
+      }
+    });
+
+    // Add click outside to close
+    popup.addEventListener('click', (e) => {
+      if (e.target === popup) {
+        popup.remove();
+        overlay.remove();
+        document.removeEventListener('keydown', handleEscape);
+
+        // Clean up CSS styles if no other popups are open
+        const remainingPopups = document.querySelectorAll('.drafty-popup');
+        if (remainingPopups.length === 0) {
+          const bulletStyles = document.querySelector('#drafty-bullet-styles');
+          if (bulletStyles) {
+            bulletStyles.remove();
+          }
+        }
+      }
+    });
+
+    // Add escape key to close
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        popup.remove();
+        overlay.remove();
+        document.removeEventListener('keydown', handleEscape);
+
+        // Clean up CSS styles if no other popups are open
+        const remainingPopups = document.querySelectorAll('.drafty-popup');
+        if (remainingPopups.length === 0) {
+          const bulletStyles = document.querySelector('#drafty-bullet-styles');
+          if (bulletStyles) {
+            bulletStyles.remove();
+          }
+        }
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+
+    // Assemble popup
+    popup.appendChild(title);
+    popup.appendChild(content);
+    popup.appendChild(closeButton);
+
+    // Add to DOM
+    document.body.appendChild(overlay);
+    document.body.appendChild(popup);
+  }
+
+  private showAuthPopup(): void {
+    // Remove any existing popup
+    const existingPopup = document.querySelector('.drafty-auth-popup');
+    if (existingPopup) {
+      existingPopup.remove();
+    }
+
+    // Create popup container
+    const popup = document.createElement('div');
+    popup.className = 'drafty-auth-popup';
+    popup.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 12px;
+      padding: 24px;
+      z-index: 10001;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+      max-width: 500px;
+      text-align: center;
+    `;
+
+    // Create popup content
+    const title = document.createElement('h3');
+    title.textContent = 'Authentication Required';
+    title.style.cssText = `
+      margin: 0 0 20px 0;
+      color: #333;
+      font-size: 20px;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 12px;
+    `;
+
+    const message = document.createElement('div');
+    message.style.cssText = `
+      color: #666;
+      font-size: 16px;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    `;
+    message.textContent = 'You are not signed in. Please sign in to Drafty by clicking the extension (puzzle piece) icon in the top-right of your chrome window. Then select the Drafty extension from the list.';
+
+    // Create close button
+    const closeButton = document.createElement('button');
+    closeButton.textContent = 'Close';
+    closeButton.style.cssText = `
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
       border: none;
       border-radius: 6px;
@@ -245,12 +514,10 @@ class ContentScript {
 
     closeButton.addEventListener('mouseenter', () => {
       closeButton.style.transform = 'scale(1.02)';
-      closeButton.style.background = '#00008B';
     });
 
     closeButton.addEventListener('mouseleave', () => {
       closeButton.style.transform = 'scale(1)';
-      closeButton.style.background = '#00BFFF';
     });
 
     // Add overlay first (before event handlers that reference it)
@@ -298,7 +565,7 @@ class ContentScript {
 
     // Assemble popup
     popup.appendChild(title);
-    popup.appendChild(content);
+    popup.appendChild(message);
     popup.appendChild(closeButton);
 
     // Add to DOM
@@ -680,7 +947,7 @@ class ContentScript {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       font-size: 14px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-      max-width: 600px;
+      max-width: 900px;
       max-height: 80vh;
       overflow-y: auto;
     `;
@@ -697,6 +964,11 @@ class ContentScript {
     `;
 
     const content = document.createElement('div');
+    content.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    `;
 
     // Handle pick assistant response data
     const options = [
@@ -713,28 +985,14 @@ class ContentScript {
         const optionDiv = document.createElement('div');
         optionDiv.style.cssText = `
           padding: 16px;
-          border: 2px solid ${index === 0 ? '#28a745' : index === 1 ? '#ffc107' : '#17a2b8'};
+          border: 2px solid #e0e0e0;
           border-radius: 8px;
-          margin-bottom: 12px;
-          background: ${index === 0 ? '#f8fff9' : index === 1 ? '#fffef8' : '#f8fdff'};
+          background: #f8f9fa;
           position: relative;
+          cursor: default;
+          text-align: center;
+          transition: background-color 0.2s ease;
         `;
-
-        // Add rank badge
-        const rankBadge = document.createElement('div');
-        rankBadge.style.cssText = `
-          position: absolute;
-          top: -8px;
-          left: 16px;
-          background: ${index === 0 ? '#28a745' : index === 1 ? '#ffc107' : '#17a2b8'};
-          color: white;
-          padding: 4px 8px;
-          border-radius: 12px;
-          font-size: 12px;
-          font-weight: 600;
-        `;
-        rankBadge.textContent = `#${index + 1}`;
-        optionDiv.appendChild(rankBadge);
 
         // Player name
         const playerName = document.createElement('div');
@@ -742,8 +1000,8 @@ class ContentScript {
           font-weight: 700;
           font-size: 16px;
           color: #333;
-          margin-bottom: 8px;
-          margin-top: 8px;
+          margin-bottom: 12px;
+          text-align: center;
         `;
         playerName.textContent = option.data.name;
         optionDiv.appendChild(playerName);
@@ -755,11 +1013,19 @@ class ContentScript {
             color: #666;
             font-size: 14px;
             line-height: 1.4;
-            margin-top: 8px;
+            text-align: left;
           `;
           reasonDiv.textContent = option.data.reason;
           optionDiv.appendChild(reasonDiv);
         }
+
+        optionDiv.addEventListener('mouseenter', () => {
+          optionDiv.style.background = '#f5f5f5';
+        });
+
+        optionDiv.addEventListener('mouseleave', () => {
+          optionDiv.style.background = 'white';
+        });
 
         content.appendChild(optionDiv);
       }
@@ -767,7 +1033,7 @@ class ContentScript {
 
     if (!hasValidOptions) {
       const noDataDiv = document.createElement('div');
-      noDataDiv.style.cssText = 'text-align: center; color: #666; padding: 20px;';
+      noDataDiv.style.cssText = 'text-align: center; color: #666; padding: 20px; grid-column: 1 / -1;';
       noDataDiv.textContent = 'No recommendations available';
       content.appendChild(noDataDiv);
     }
@@ -785,6 +1051,7 @@ class ContentScript {
       font-size: 14px;
       font-weight: 600;
       transition: all 0.3s ease;
+      margin-top: 20px;
     `;
 
     closeButton.addEventListener('mouseenter', () => {
@@ -848,129 +1115,6 @@ class ContentScript {
     document.body.appendChild(popup);
   }
 
-  private showAuthPopup(): void {
-    // Remove any existing popup
-    const existingPopup = document.querySelector('.drafty-auth-popup');
-    if (existingPopup) {
-      existingPopup.remove();
-    }
-
-    // Create popup container
-    const popup = document.createElement('div');
-    popup.className = 'drafty-auth-popup';
-    popup.style.cssText = `
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      border: 1px solid #ccc;
-      border-radius: 12px;
-      padding: 24px;
-      z-index: 10001;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 14px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-      max-width: 500px;
-      text-align: center;
-    `;
-
-    // Create popup content
-    const title = document.createElement('h3');
-    title.textContent = 'Authentication Required';
-    title.style.cssText = `
-      margin: 0 0 20px 0;
-      color: #333;
-      font-size: 20px;
-      border-bottom: 2px solid #667eea;
-      padding-bottom: 12px;
-    `;
-
-    const message = document.createElement('div');
-    message.style.cssText = `
-      color: #666;
-      font-size: 16px;
-      line-height: 1.5;
-      margin-bottom: 20px;
-    `;
-    message.textContent = 'You are not signed in. Please sign in to Drafty by clicking the extension (puzzle piece) icon in the top-right of your chrome window. Then select the Drafty extension from the list.';
-
-    // Create close button
-    const closeButton = document.createElement('button');
-    closeButton.textContent = 'Close';
-    closeButton.style.cssText = `
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      border: none;
-      border-radius: 6px;
-      padding: 10px 20px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 600;
-      transition: all 0.3s ease;
-    `;
-
-    closeButton.addEventListener('mouseenter', () => {
-      closeButton.style.transform = 'scale(1.02)';
-    });
-
-    closeButton.addEventListener('mouseleave', () => {
-      closeButton.style.transform = 'scale(1)';
-    });
-
-    // Add overlay first (before event handlers that reference it)
-    const overlay = document.createElement('div');
-    overlay.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.5);
-      z-index: 10000;
-    `;
-
-    overlay.addEventListener('click', () => {
-      overlay.remove();
-      popup.remove();
-      document.removeEventListener('keydown', handleEscape);
-    });
-
-    closeButton.addEventListener('click', () => {
-      popup.remove();
-      overlay.remove();
-      document.removeEventListener('keydown', handleEscape);
-    });
-
-    // Add click outside to close
-    popup.addEventListener('click', (e) => {
-      if (e.target === popup) {
-        popup.remove();
-        overlay.remove();
-        document.removeEventListener('keydown', handleEscape);
-      }
-    });
-
-    // Add escape key to close
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        popup.remove();
-        overlay.remove();
-        document.removeEventListener('keydown', handleEscape);
-      }
-    };
-    document.addEventListener('keydown', handleEscape);
-
-    // Assemble popup
-    popup.appendChild(title);
-    popup.appendChild(message);
-    popup.appendChild(closeButton);
-
-    // Add to DOM
-    document.body.appendChild(overlay);
-    document.body.appendChild(popup);
-  }
-
   destroy(): void {
     if (this.observer) {
       this.observer.disconnect();
@@ -996,6 +1140,12 @@ class ContentScript {
     const existingOverlay = document.querySelector('div[style*="rgba(0,0,0,0.5)"]');
     if (existingOverlay) {
       existingOverlay.remove();
+    }
+
+    // Clean up CSS styles
+    const bulletStyles = document.querySelector('#drafty-bullet-styles');
+    if (bulletStyles) {
+      bulletStyles.remove();
     }
 
     // Clean up floating button
