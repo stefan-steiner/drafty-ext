@@ -466,51 +466,183 @@ class ContentScript {
       font-family: 'Inter', system-ui, sans-serif;
       font-size: 14px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-      max-width: 500px;
+      max-width: 400px;
       text-align: center;
     `;
 
+    // Create logo container at the top
+    const logoContainer = document.createElement('div');
+    logoContainer.style.cssText = `
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+    `;
+
+    const svgUrl = chrome.runtime.getURL('assets/drafty_logo_blue.svg');
+    const img = document.createElement('img');
+    img.src = svgUrl;
+    img.style.cssText = `
+      width: 110px;
+      height: 45px;
+    `;
+    logoContainer.appendChild(img);
+
     // Create popup content
     const title = document.createElement('h3');
-    title.textContent = 'Authentication Required';
+    title.textContent = 'Login Required';
     title.style.cssText = `
       margin: 0 0 20px 0;
       color: #333;
       font-size: 20px;
-      border-bottom: 2px solid #667eea;
-      padding-bottom: 12px;
+      font-weight: 600;
     `;
 
-    const message = document.createElement('div');
-    message.style.cssText = `
+    // Create steps container
+    const stepsContainer = document.createElement('div');
+    stepsContainer.style.cssText = `
       color: #666;
       font-size: 16px;
-      line-height: 1.5;
+      line-height: 1.6;
       margin-bottom: 20px;
+      text-align: left;
     `;
-    message.textContent = 'You are not signed in. Please sign in to Drafty by clicking the extension (puzzle piece) icon in the top-right of your chrome window. Then select the Drafty extension from the list.';
+
+    // Step 1: Click the chrome extension button
+    const step1 = document.createElement('div');
+    step1.style.cssText = `
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 20px;
+      gap: 12px;
+    `;
+
+    const chromeIcon = document.createElement('div');
+    const chromeSvgUrl = chrome.runtime.getURL('assets/chrome_puzzle.svg');
+    const chromeImg = document.createElement('img');
+    chromeImg.src = chromeSvgUrl;
+    chromeImg.style.cssText = `
+      width: 20px;
+      height: 20px;
+      color: #666;
+    `;
+    chromeIcon.appendChild(chromeImg);
+    chromeIcon.style.cssText = `
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+    `;
+
+    const step1Text = document.createElement('span');
+    step1Text.textContent = 'Click the chrome extension button in the top right of your browser';
+    step1Text.style.cssText = `
+      font-weight: 500;
+      line-height: 1.4;
+    `;
+
+    step1.appendChild(chromeIcon);
+    step1.appendChild(step1Text);
+
+    // Step 2: Click on Drafty
+    const step2 = document.createElement('div');
+    step2.style.cssText = `
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 20px;
+      gap: 12px;
+    `;
+
+    const draftyIcon = document.createElement('div');
+    const draftySvgUrl = chrome.runtime.getURL('assets/drafty_logo_d.svg');
+    const draftyImg = document.createElement('img');
+    draftyImg.src = draftySvgUrl;
+    draftyImg.style.cssText = `
+      width: 20px;
+      height: 20px;
+      filter: brightness(0) invert(1);
+    `;
+    draftyIcon.appendChild(draftyImg);
+    draftyIcon.style.cssText = `
+      background: #00BFFF;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+    `;
+
+    const step2Text = document.createElement('span');
+    step2Text.textContent = 'Click on the Drafty extension';
+    step2Text.style.cssText = `
+      font-weight: 500;
+      line-height: 1.4;
+    `;
+
+    step2.appendChild(draftyIcon);
+    step2.appendChild(step2Text);
+
+    // Step 3: Login with your email and password
+    const step3 = document.createElement('div');
+    step3.style.cssText = `
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 20px;
+      gap: 12px;
+    `;
+
+    const loginIcon = document.createElement('div');
+    loginIcon.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="#000000"/>
+    </svg>`;
+    loginIcon.style.cssText = `
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+    `;
+
+    const step3Text = document.createElement('span');
+    step3Text.textContent = 'Login with your email and password';
+    step3Text.style.cssText = `
+      font-weight: 500;
+      line-height: 1.4;
+    `;
+
+    step3.appendChild(loginIcon);
+    step3.appendChild(step3Text);
+
+    // Add steps to container
+    stepsContainer.appendChild(step1);
+    stepsContainer.appendChild(step2);
+    stepsContainer.appendChild(step3);
 
     // Create close button
     const closeButton = document.createElement('button');
     closeButton.textContent = 'Close';
     closeButton.style.cssText = `
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: #00BFFF;
       color: white;
       border: none;
-      border-radius: 6px;
-      padding: 10px 20px;
+      border-radius: 8px;
+      padding: 12px 24px;
       cursor: pointer;
       font-size: 14px;
       font-weight: 600;
-      transition: all 0.3s ease;
+      font-family: 'Inter', system-ui, sans-serif;
+      transition: all 0.2s ease;
     `;
 
     closeButton.addEventListener('mouseenter', () => {
-      closeButton.style.transform = 'scale(1.02)';
+      closeButton.style.background = '#00008B';
     });
 
     closeButton.addEventListener('mouseleave', () => {
-      closeButton.style.transform = 'scale(1)';
+      closeButton.style.background = '#00BFFF';
     });
 
     // Add overlay first (before event handlers that reference it)
@@ -557,8 +689,9 @@ class ContentScript {
     document.addEventListener('keydown', handleEscape);
 
     // Assemble popup
+    popup.appendChild(logoContainer);
     popup.appendChild(title);
-    popup.appendChild(message);
+    popup.appendChild(stepsContainer);
     popup.appendChild(closeButton);
 
     // Add to DOM
