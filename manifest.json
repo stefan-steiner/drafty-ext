@@ -11,8 +11,7 @@
   "host_permissions": [
     "https://fantasy.espn.com/*",
     "https://football.fantasysports.yahoo.com/*",
-    "https://sleeper.com/*",
-    "https://api.drafty.com/*"
+    "https://sleeper.com/*"
   ],
   "background": {
     "service_worker": "background.js"
