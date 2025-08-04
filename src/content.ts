@@ -1073,8 +1073,8 @@ class ContentScript {
       font-family: 'Inter', system-ui, sans-serif;
       font-size: 14px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-      width: 50vw;
-      max-width: 1200px;
+      width: 70vw;
+      max-width: 1400px;
       max-height: 80vh;
       overflow-y: auto;
     `;
