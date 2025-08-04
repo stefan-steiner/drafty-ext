@@ -1,12 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "Drafty - Fantasy Football Draft Assistant",
+  "name": "Drafty",
   "version": "1.0.0",
-  "description": "Get player insights and analysis during your fantasy football draft",
+  "description": "Fantasy Football Draft Assistant",
   "permissions": [
-    "storage",
-    "activeTab",
-    "scripting"
+    "storage"
   ],
   "host_permissions": [
     "https://fantasy.espn.com/*",
