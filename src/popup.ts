@@ -19,7 +19,6 @@ class PopupManager {
       await this.checkAuthStatus();
       this.setupEventListeners();
     } catch (error) {
-      console.error('Error initializing popup:', error);
       const errorMessage = ErrorHandler.getErrorMessage(error, 'initialization');
       this.showError(errorMessage);
     }
@@ -49,7 +48,6 @@ class PopupManager {
             this.showLogin();
           }
         } catch (error) {
-          console.error('Error validating token:', error);
           // If we can't connect to server, show error instead of login
           const errorMessage = ErrorHandler.getErrorMessage(error, 'token validation');
           this.showError(errorMessage);
@@ -133,8 +131,6 @@ class PopupManager {
         await this.storageService.setAuthToken(token);
         await this.storageService.setUserData(user);
 
-        console.log('Popup: Auth token stored in storage');
-
         this.apiService.setAuthToken(token);
         this.currentUser = user;
 
@@ -146,7 +142,6 @@ class PopupManager {
         this.showLoginError(errorMessage);
       }
     } catch (error) {
-      console.error('Login error:', error);
       // Go back to login screen and show error
       this.showLogin();
       const errorMessage = ErrorHandler.getErrorMessage(error, 'login');
@@ -190,8 +185,6 @@ class PopupManager {
         await this.storageService.setAuthToken(token);
         await this.storageService.setUserData(user);
 
-        console.log('Popup: Auth token stored in storage (signup)');
-
         this.apiService.setAuthToken(token);
         this.currentUser = user;
 
@@ -203,7 +196,6 @@ class PopupManager {
         this.showSignupError(errorMessage);
       }
     } catch (error) {
-      console.error('Signup error:', error);
       // Go back to signup screen and show error
       this.showSignup();
       const errorMessage = ErrorHandler.getErrorMessage(error, 'signup');
@@ -215,7 +207,7 @@ class PopupManager {
     try {
       await this.apiService.logout();
     } catch (error) {
-      console.error('Logout API error:', error);
+      // Continue with logout even if API call fails
     }
 
     // Clear local data regardless of API response

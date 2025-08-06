@@ -1,5 +1,5 @@
-import { StorageService } from './services/storage';
 import { ApiService } from './services/api';
+import { StorageService } from './services/storage';
 
 class BackgroundScript {
   private storageService: StorageService;
@@ -14,7 +14,7 @@ class BackgroundScript {
   private async initialize(): Promise<void> {
     // Initialize authentication state
     await this.initializeAuth();
-    
+
     // Set up event listeners
     this.setupEventListeners();
   }
@@ -80,7 +80,7 @@ class BackgroundScript {
             sendResponse({ error: 'Not authenticated' });
             return;
           }
-          
+
           const response = await this.apiService.getPlayerDataByName(message.playerName);
           sendResponse(response);
           break;
@@ -89,7 +89,6 @@ class BackgroundScript {
           sendResponse({ error: 'Unknown message type' });
       }
     } catch (error) {
-      console.error('Error handling message:', error);
       sendResponse({ error: 'Internal error' });
     }
   }
@@ -110,4 +109,4 @@ class BackgroundScript {
 }
 
 // Initialize background script
-new BackgroundScript(); 
+new BackgroundScript();

@@ -1,4 +1,4 @@
-import { AuthToken, User, STORAGE_KEYS } from '../types';
+import { AuthToken, STORAGE_KEYS, User } from '../types';
 
 export class StorageService {
   private static instance: StorageService;
@@ -18,7 +18,6 @@ export class StorageService {
       const result = await chrome.storage.local.get(key);
       return result[key] || null;
     } catch (error) {
-      console.error('Error getting from storage:', error);
       return null;
     }
   }
@@ -27,7 +26,7 @@ export class StorageService {
     try {
       await chrome.storage.local.set({ [key]: value });
     } catch (error) {
-      console.error('Error setting storage:', error);
+      // Storage error - continue silently
     }
   }
 
@@ -35,7 +34,7 @@ export class StorageService {
     try {
       await chrome.storage.local.remove(key);
     } catch (error) {
-      console.error('Error removing from storage:', error);
+      // Storage error - continue silently
     }
   }
 
@@ -43,14 +42,14 @@ export class StorageService {
     try {
       await chrome.storage.local.clear();
     } catch (error) {
-      console.error('Error clearing storage:', error);
+      // Storage error - continue silently
     }
   }
 
   // Auth-specific methods
   async getAuthToken(): Promise<AuthToken | null> {
     const token = await this.get<AuthToken>(STORAGE_KEYS.AUTH_TOKEN);
-    
+
     if (!token) return null;
 
     // Check if token is expired
@@ -82,4 +81,4 @@ export class StorageService {
   async clearUserData(): Promise<void> {
     await this.remove(STORAGE_KEYS.USER_DATA);
   }
-} 
+}

@@ -34,10 +34,8 @@ class ContentScript {
 
   private async initializeAuth(): Promise<void> {
     const token = await this.storageService.getAuthToken();
-    console.log('Content script: Auth token retrieved:', token ? 'Token exists' : 'No token');
     if (token) {
       this.apiService.setAuthToken(token);
-      console.log('Content script: Auth token set in API service');
     }
   }
 
@@ -45,7 +43,6 @@ class ContentScript {
     // Listen for storage changes to detect auth token updates
     chrome.storage.onChanged.addListener((changes, namespace) => {
       if (namespace === 'local' && changes.auth_token) {
-        console.log('Auth token changed, re-initializing auth...');
         this.initializeAuth();
       }
     });
@@ -103,7 +100,6 @@ class ContentScript {
         this.showError(`Failed to get data for ${playerName}: ${response.error}`);
       }
     } catch (error) {
-      console.error('Error handling player action:', error);
       this.showError('An error occurred while fetching player data');
     }
   }
@@ -877,8 +873,6 @@ class ContentScript {
     }
 
     try {
-      console.log('🚀 Floating button clicked, starting player collection...');
-
       // Step 1: Show loading overlay for searching players
       this.showLoadingOverlay('Searching available players');
 
@@ -887,24 +881,18 @@ class ContentScript {
       const parser = this.parserManager.getParserForUrl(currentUrl);
 
       if (!parser) {
-        console.log('❌ No parser found for this URL');
         this.hideLoadingOverlay();
         this.showError('No parser found for this URL');
         return;
       }
 
-      console.log('🔍 Starting to collect players...');
       const availableNames = await parser.getAvailableNames(25);
       const draftedNames = await parser.getDraftedNames();
-
-      console.log(`📊 Found ${availableNames.length} available player names`);
-      console.log(`📊 Found ${draftedNames.length} drafted player names`);
 
       // Remove the first loading overlay
       this.hideLoadingOverlay();
 
       if (availableNames.length === 0) {
-        console.log('❌ No players found on this page');
         this.showError('No players found on this page');
         return;
       }
@@ -913,8 +901,6 @@ class ContentScript {
       this.showLoadingOverlay('Analyzing possible picks');
 
       // Step 8: Call backend API
-      console.log('🌐 Calling API with available names and drafted names:', availableNames, draftedNames);
-
       // Prepare API request based on the parser type
       let apiRequest: any = {
         players_available: availableNames,
@@ -932,20 +918,15 @@ class ContentScript {
 
       const response = await this.apiService.pickAssistant(apiRequest);
 
-      console.log('📡 API response received:', response);
-
       // Step 9: Remove loading overlay and show results
       this.hideLoadingOverlay();
 
       if (response.success && response.data) {
-        console.log('✅ API call successful, showing pick assistant data');
         this.showPickAssistant(response.data);
       } else {
-        console.log('❌ API call failed:', response.error);
         this.showError(`Failed to get player data: ${response.error}`);
       }
     } catch (error) {
-      console.error('💥 Error handling floating button click:', error);
       this.hideLoadingOverlay();
       this.showError('An error occurred while fetching player data');
     }

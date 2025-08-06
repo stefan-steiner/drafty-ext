@@ -33,7 +33,6 @@ export class YahooPlayerRow implements PlayerRow {
     if (!nameElement) {
       return;
     }
-    console.log('DRAFTY: name element', nameElement);
 
     const button = document.createElement('button');
     button.className = 'drafty-action-btn';
@@ -180,12 +179,9 @@ export class YahooParser extends BaseParser {
   }
 
   async getAvailableNames(requiredCount: number): Promise<string[]> {
-    console.log(`Yahoo Parser: Getting ${requiredCount} available player names`);
-
     // Step 1: Check if the table is scrollable
     const table = this.findPlayerListingTable();
     if (!table) {
-      console.log(`Yahoo Parser: Could not find player listing table`);
       return [];
     }
 
@@ -193,12 +189,9 @@ export class YahooParser extends BaseParser {
     const clientHeight = table.clientHeight;
     const isScrollable = scrollHeight > clientHeight;
 
-    console.log(`Yahoo Parser: Table scrollable: ${isScrollable} (scrollHeight: ${scrollHeight}, clientHeight: ${clientHeight})`);
-
     if (!isScrollable) {
       // If not scrollable, just collect all visible players
       const playerNames = this.getCurrentPlayerNames();
-      console.log(`Yahoo Parser: Non-scrollable table - found ${playerNames.length} player names`);
       return playerNames;
     }
 
@@ -222,8 +215,6 @@ export class YahooParser extends BaseParser {
         }
       });
 
-      console.log(`Yahoo Parser: Found ${playerNames.length} unique player names (needed ${requiredCount})`);
-
       // If we have enough players, break
       if (playerNames.length >= requiredCount) {
         break;
@@ -243,7 +234,6 @@ export class YahooParser extends BaseParser {
 
     // Step 6: Return exactly the first requiredCount players
     const finalNames = playerNames.slice(0, requiredCount);
-    console.log(`Yahoo Parser: Final collection: ${finalNames.length} player names`);
     return finalNames;
   }
 
@@ -346,12 +336,9 @@ export class YahooParser extends BaseParser {
   }
 
   async getDraftedNames(): Promise<DraftedPlayer[]> {
-    console.log(`Yahoo Parser: Getting all drafted player names`);
-
     // Step 1: Check if the section is scrollable
     const container = this.findMyTeamTableContainer();
     if (!container) {
-      console.log(`Yahoo Parser: Could not find my team table container`);
       return [];
     }
 
@@ -359,12 +346,9 @@ export class YahooParser extends BaseParser {
     const clientHeight = container.clientHeight;
     const isScrollable = scrollHeight > clientHeight;
 
-    console.log(`Yahoo Parser: Section scrollable: ${isScrollable} (scrollHeight: ${scrollHeight}, clientHeight: ${clientHeight})`);
-
     if (!isScrollable) {
       // If not scrollable, just collect all visible players
       const playerNames = this.getCurrentDraftedNames();
-      console.log(`Yahoo Parser: Non-scrollable section - found ${playerNames.length} player names`);
       return playerNames;
     }
 
@@ -389,8 +373,6 @@ export class YahooParser extends BaseParser {
         }
       });
 
-      console.log(`Yahoo Parser: Found ${playerNames.length} unique drafted player names`);
-
       // Scroll down slightly
       await this.scrollDraftedDown();
 
@@ -401,7 +383,6 @@ export class YahooParser extends BaseParser {
 
       // If we're at the bottom or scroll position hasn't changed, we're done
       if (currentScrollTop + currentClientHeight >= currentScrollHeight || currentScrollTop === previousScrollTop) {
-        console.log(`Yahoo Parser: Reached bottom of drafted section`);
         break;
       }
 
@@ -416,7 +397,6 @@ export class YahooParser extends BaseParser {
     // Step 5: Scroll back to top
     await this.scrollDraftedToTop();
 
-    console.log(`Yahoo Parser: Final drafted collection: ${playerNames.length} player names`);
     return playerNames;
   }
 

@@ -248,8 +248,6 @@ export class SleeperParser extends BaseParser {
   }
 
   async getAvailableNames(requiredCount: number): Promise<string[]> {
-    console.log(`Sleeper Parser: Getting ${requiredCount} available player names`);
-
     // Step 2: Scroll to top
     await this.scrollToTop();
 
@@ -270,8 +268,6 @@ export class SleeperParser extends BaseParser {
         }
       });
 
-      console.log(`Sleeper Parser: Found ${playerNames.length} unique player names (needed ${requiredCount})`);
-
       // If we have enough players, break
       if (playerNames.length >= requiredCount) {
         break;
@@ -291,7 +287,6 @@ export class SleeperParser extends BaseParser {
 
     // Step 6: Return exactly the first requiredCount players
     const finalNames = playerNames.slice(0, requiredCount);
-    console.log(`Sleeper Parser: Final collection: ${finalNames.length} player names`);
     return finalNames;
   }
 
@@ -349,8 +344,6 @@ export class SleeperParser extends BaseParser {
   }
 
   async getDraftedNames(): Promise<string[]> {
-    console.log(`Sleeper Parser: Getting all drafted player names`);
-
     // Step 1: Check if roster section exists or needs to be accessed via tab
     let rosterSection = this.findDraftRosterSection();
 
@@ -372,13 +365,11 @@ export class SleeperParser extends BaseParser {
     }
 
     if (!rosterSection) {
-      console.log(`Sleeper Parser: Could not find draft roster section`);
       return [];
     }
 
     // Step 2: Collect all drafted players (no scrolling needed as mentioned)
     const playerNames = this.getCurrentDraftedNames();
-    console.log(`Sleeper Parser: Found ${playerNames.length} drafted player names`);
     return playerNames;
   }
 
