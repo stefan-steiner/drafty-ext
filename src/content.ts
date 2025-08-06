@@ -896,6 +896,8 @@ class ContentScript {
         this.showError('No players found on this page');
         return;
       }
+      console.log('Available players:', availableNames);
+      console.log('Drafted players:', draftedNames);
 
       // Step 7: Show loading overlay for analyzing picks
       this.showLoadingOverlay('Analyzing possible picks');
@@ -911,6 +913,7 @@ class ContentScript {
       if (parser.usesDraftAbbreviations()) {
         // Yahoo format - array of DraftedPlayer objects
         apiRequest.players_drafted_abbreviations = draftedNames;
+
       } else {
         // ESPN format - array of strings
         apiRequest.players_drafted = draftedNames;

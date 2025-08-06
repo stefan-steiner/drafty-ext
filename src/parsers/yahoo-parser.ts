@@ -94,6 +94,47 @@ export class YahooParser extends BaseParser {
     return url.startsWith('https://football.fantasysports.yahoo.com/draftclient/');
   }
 
+  async ensureCorrectPlayerView(): Promise<void> {
+    // Click the Players tab
+    const playersTab = document.querySelector<HTMLButtonElement>('button[data-id="players"]');
+    if (playersTab && !playersTab.getAttribute('aria-selected')) {
+      playersTab.click();
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    // Set position filter to "All Players"
+    const positionFilter = document.querySelector<HTMLSelectElement>('#position-filter');
+    if (positionFilter && positionFilter.value !== 'pos_type=All') {
+      positionFilter.value = 'pos_type=All';
+      positionFilter.dispatchEvent(new Event('change', { bubbles: true }));
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+
+    // Clear search input if it has any value
+    const searchInput = document.querySelector<HTMLInputElement>('#search');
+    if (searchInput && searchInput.value.trim() !== '') {
+      searchInput.value = '';
+      searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+      searchInput.dispatchEvent(new Event('change', { bubbles: true }));
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+
+    // Uncheck "Show Drafted" if checked
+    const showDraftedCheckbox = document.querySelector<HTMLInputElement>('#show-drafted');
+    if (showDraftedCheckbox && showDraftedCheckbox.checked) {
+      showDraftedCheckbox.click();
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    // Set stat mode filter to "2025 Proj Stats"
+    const statModeFilter = document.querySelector<HTMLSelectElement>('#stat-mode-filter');
+    if (statModeFilter && statModeFilter.value !== 'projected') {
+      statModeFilter.value = 'projected';
+      statModeFilter.dispatchEvent(new Event('change', { bubbles: true }));
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
+
   getPlayerRows(): PlayerRow[] {
     const playersSection = document.querySelector<HTMLElement>('.player-listing-table');
     if (!playersSection) {
@@ -179,6 +220,9 @@ export class YahooParser extends BaseParser {
   }
 
   async getAvailableNames(requiredCount: number): Promise<string[]> {
+    // Ensure the correct player view is selected
+    await this.ensureCorrectPlayerView();
+
     // Step 1: Check if the table is scrollable
     const table = this.findPlayerListingTable();
     if (!table) {

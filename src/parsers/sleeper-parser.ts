@@ -247,7 +247,42 @@ export class SleeperParser extends BaseParser {
     return playerNames;
   }
 
+  private async ensureCorrectPlayerView(): Promise<void> {
+    const draftRankings = document.querySelector<HTMLElement>('.draft-rankings');
+    if (!draftRankings) {
+      return;
+    }
+
+    // Clear the player search
+    const searchInput = draftRankings.querySelector<HTMLInputElement>('.header-controls .player-search input');
+    if (searchInput && searchInput.value) {
+      searchInput.value = '';
+      searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    // Select "All" from positions filter (first filter-item)
+    const allFilter = draftRankings.querySelector<HTMLElement>('.positions-filter .filter-item');
+    if (allFilter && !allFilter.classList.contains('selected')) {
+      allFilter.click();
+    }
+
+    // Uncheck all filters in header-filters
+    const headerFilters = draftRankings.querySelectorAll<HTMLElement>('.header-filters .filter-button');
+    for (const filterButton of headerFilters) {
+      const checkbox = filterButton.querySelector<HTMLElement>('.custom-checkbox');
+      if (checkbox && checkbox.classList.contains('checked')) {
+        filterButton.click();
+      }
+    }
+
+    // Single delay for all UI updates to settle
+    await new Promise(resolve => setTimeout(resolve, 300));
+  }
+
   async getAvailableNames(requiredCount: number): Promise<string[]> {
+    // Step 1: Ensure correct view is selected
+    await this.ensureCorrectPlayerView();
+
     // Step 2: Scroll to top
     await this.scrollToTop();
 

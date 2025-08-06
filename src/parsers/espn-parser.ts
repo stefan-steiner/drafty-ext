@@ -268,6 +268,9 @@ export class ESPNParser extends BaseParser {
   }
 
   async getAvailableNames(requiredCount: number): Promise<string[]> {
+    // Step 1: Ensure correct tab and filters are set
+    await this.ensureCorrectPlayerView();
+
     // Step 2: Scroll to top
     await this.scrollToTop();
 
@@ -308,6 +311,59 @@ export class ESPNParser extends BaseParser {
     // Step 6: Return exactly the first requiredCount players
     const finalNames = playerNames.slice(0, requiredCount);
     return finalNames;
+  }
+
+  private async ensureCorrectPlayerView(): Promise<void> {
+    // Click on Players tab
+    const playersTab = document.querySelector<HTMLElement>('.draft_tabs_container .tabs__list__item button[role="tab"]');
+    if (playersTab && playersTab.textContent?.trim() === 'Players') {
+      playersTab.click();
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+
+    // Ensure Show Drafted toggle is off
+    const showDraftedToggle = document.querySelector<HTMLInputElement>('.drafted-players-toggle-container input[type="checkbox"]');
+    if (showDraftedToggle && showDraftedToggle.checked) {
+      showDraftedToggle.click();
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+
+    // Clear any player search
+    const clearSearchButton = document.querySelector<HTMLElement>('.player--search--clear');
+    if (clearSearchButton) {
+      clearSearchButton.click();
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+
+    // Set filters to correct values
+    const filtersContainer = document.querySelector<HTMLElement>('.draft-players .filters');
+    console.log(filtersContainer);
+    if (filtersContainer) {
+      // Find all dropdown select elements within filters (up to 2 levels deep)
+      const dropdowns = filtersContainer.querySelectorAll<HTMLSelectElement>('.dropdown select.dropdown__select:not([aria-hidden])');
+      console.log(dropdowns);
+
+      // Set to "2025 Projected" (first dropdown)
+      if (dropdowns.length >= 1) {
+        dropdowns[0].value = 'currentSeasonProjectedStats';
+        dropdowns[0].dispatchEvent(new Event('change', { bubbles: true }));
+      }
+
+      // Set to "All Pos." (second dropdown)
+      if (dropdowns.length >= 2) {
+        dropdowns[1].value = '-1';
+        dropdowns[1].dispatchEvent(new Event('change', { bubbles: true }));
+      }
+
+      // Set to "All NFL Teams" (third dropdown)
+      if (dropdowns.length >= 3) {
+        dropdowns[2].value = '-1';
+        dropdowns[2].dispatchEvent(new Event('change', { bubbles: true }));
+      }
+
+      // Single delay for all filter changes to process
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
   }
 
   private findDraftedRosterSection(): HTMLElement | null {
