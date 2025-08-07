@@ -95,11 +95,20 @@ export class YahooParser extends BaseParser {
   }
 
   async ensureCorrectPlayerView(teamName?: string): Promise<void> {
-    // Click the Players tab
+    // Click the Players tab if it's not already selected
     const playersTab = document.querySelector<HTMLButtonElement>('button[data-id="players"]');
-    if (playersTab && !playersTab.getAttribute('aria-selected')) {
-      playersTab.click();
-      await new Promise(resolve => setTimeout(resolve, 100));
+
+    if (playersTab) {
+      const isSelected = playersTab.getAttribute('aria-selected') === 'true';
+
+      if (!isSelected) {
+        try {
+          playersTab.click();
+          await new Promise(resolve => setTimeout(resolve, 200));
+        } catch (error) {
+          console.error('YahooParser: Error clicking players tab:', error);
+        }
+      }
     }
 
     // Set position filter to "All Players"
@@ -132,6 +141,29 @@ export class YahooParser extends BaseParser {
       statModeFilter.value = 'projected';
       statModeFilter.dispatchEvent(new Event('change', { bubbles: true }));
       await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    // Make sure we are sorting by Expert Rank
+    const expertRankSorter = document.querySelector<HTMLElement>('.ys-stat');
+    if (expertRankSorter && expertRankSorter.textContent?.trim() === 'Expert Rank') {
+      // Click the sorter until we see the ys-dir0 icon
+      let attempts = 0;
+      const maxAttempts = 3; // Prevent infinite loops
+
+      while (attempts < maxAttempts) {
+        // Check if we already have the ys-dir0 icon
+        const hasCorrectIcon = expertRankSorter.querySelector('i.ys-dir0');
+
+        if (hasCorrectIcon) {
+          break; // Already sorted correctly
+        }
+
+        // Click the sorter
+        expertRankSorter.click();
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        attempts++;
+      }
     }
   }
 
@@ -446,8 +478,7 @@ export class YahooParser extends BaseParser {
   }
 
   getTeamName(): Promise<string | null> {
-    // TODO: Implement Yahoo team name detection
-    // This would need to find the team selector dropdown on Yahoo's draft page
+    // Yahoo does not need to set the team name
     return Promise.resolve(null);
   }
 }

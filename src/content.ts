@@ -926,9 +926,6 @@ class ContentScript {
         this.showError('No players found on this page');
         return;
       }
-      // TODO: REMOVE
-      console.log('Available players:', availableNames);
-      console.log('Drafted players:', draftedNames);
 
       // Step 7: Show loading overlay for analyzing picks with cancel button
       this.showLoadingOverlay('Analyzing possible picks', true);
