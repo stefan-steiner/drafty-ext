@@ -13,6 +13,7 @@ class ContentScript {
   private floatingButton: HTMLElement | null = null;
   private isDragging = false;
   private dragOffset = { x: 0, y: 0 };
+  private currentAbortController: AbortController | null = null;
 
   constructor() {
     this.apiService = ApiService.getInstance();
@@ -114,7 +115,8 @@ class ContentScript {
     }
 
     try {
-      const response = await this.apiService.getPlayerDataByName(playerName, 'standard');
+      const scoringType = await this.storageService.getScoringType();
+      const response = await this.apiService.getPlayerDataByName(playerName, scoringType as any);
 
       if (response.success && response.data) {
         this.showPlayerData(playerRow.root, playerName, response.data);
@@ -914,7 +916,7 @@ class ContentScript {
       // Ensure correct player view is set up first
       await parser.ensureCorrectPlayerView(teamName || undefined);
 
-      const availableNames = await parser.getAvailableNames(25);
+      const availableNames = await parser.getAvailableNames(26);
       const draftedNames = await parser.getDraftedNames();
 
       // Remove the first loading overlay
@@ -928,14 +930,18 @@ class ContentScript {
       console.log('Available players:', availableNames);
       console.log('Drafted players:', draftedNames);
 
-      // Step 7: Show loading overlay for analyzing picks
-      this.showLoadingOverlay('Analyzing possible picks');
+      // Step 7: Show loading overlay for analyzing picks with cancel button
+      this.showLoadingOverlay('Analyzing possible picks', true);
 
-      // Step 8: Call backend API
+      // Step 8: Call backend API with AbortController
+      // Create new AbortController for this request
+      this.currentAbortController = new AbortController();
+
       // Prepare API request based on the parser type
+      const scoringType = await this.storageService.getScoringType();
       let apiRequest: any = {
         players_available: availableNames,
-        scoring_type: 'standard' // You can make this configurable later
+        scoring_type: scoringType
       };
 
       // Use the parser's helper method to determine the format
@@ -948,7 +954,10 @@ class ContentScript {
         apiRequest.players_drafted = draftedNames;
       }
 
-      const response = await this.apiService.pickAssistant(apiRequest);
+      const response = await this.apiService.pickAssistant(apiRequest, this.currentAbortController.signal);
+
+      // Clear the AbortController
+      this.currentAbortController = null;
 
       // Step 9: Remove loading overlay and show results
       this.hideLoadingOverlay();
@@ -956,15 +965,21 @@ class ContentScript {
       if (response.success && response.data) {
         this.showPickAssistant(response.data);
       } else {
-        this.showError(`Failed to get player data: ${response.error}`);
+        // Don't show error if request was cancelled
+        if (response.error !== 'Request cancelled') {
+          this.showError(`Failed to get player data: ${response.error}`);
+        }
       }
     } catch (error) {
       this.hideLoadingOverlay();
-      this.showError('An error occurred while fetching player data');
+      // Don't show error if request was cancelled
+      if (error instanceof Error && error.name !== 'AbortError') {
+        this.showError('An error occurred while fetching player data');
+      }
     }
   }
 
-  private showLoadingOverlay(message: string): void {
+  private showLoadingOverlay(message: string, showCancelButton: boolean = false): void {
     // Remove any existing overlay
     this.hideLoadingOverlay();
 
@@ -1025,29 +1040,76 @@ class ContentScript {
 
     container.appendChild(spinner);
     container.appendChild(text);
+
+    // Add cancel button if requested
+    if (showCancelButton) {
+      const cancelButton = document.createElement('button');
+      cancelButton.textContent = 'Cancel';
+      cancelButton.style.cssText = `
+        background: #00BFFF;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 12px 24px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        font-family: 'Inter', system-ui, sans-serif;
+        transition: all 0.2s ease;
+        margin-top: 20px;
+      `;
+
+      cancelButton.addEventListener('mouseenter', () => {
+        cancelButton.style.background = '#00008B';
+      });
+
+      cancelButton.addEventListener('mouseleave', () => {
+        cancelButton.style.background = '#00BFFF';
+      });
+
+      cancelButton.addEventListener('click', () => {
+        this.handleCancelRequest();
+      });
+
+      container.appendChild(cancelButton);
+    }
+
     overlay.appendChild(container);
 
-    // Prevent ALL events
-    const preventEvent = (e: Event) => {
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-      return false;
-    };
+    // Prevent ALL events only if not showing cancel button
+    if (!showCancelButton) {
+      const preventEvent = (e: Event) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        return false;
+      };
 
-    // Block all possible events
-    const events = [
-      'mousedown', 'mouseup', 'mousemove', 'click', 'dblclick', 'contextmenu',
-      'wheel', 'scroll', 'keydown', 'keyup', 'keypress', 'touchstart', 'touchend',
-      'touchmove', 'dragstart', 'drag', 'dragend', 'drop', 'focus', 'blur',
-      'input', 'change', 'submit', 'reset', 'select', 'selectstart'
-    ];
+      // Block all possible events
+      const events = [
+        'mousedown', 'mouseup', 'mousemove', 'click', 'dblclick', 'contextmenu',
+        'wheel', 'scroll', 'keydown', 'keyup', 'keypress', 'touchstart', 'touchend',
+        'touchmove', 'dragstart', 'drag', 'dragend', 'drop', 'focus', 'blur',
+        'input', 'change', 'submit', 'reset', 'select', 'selectstart'
+      ];
 
-    events.forEach(eventType => {
-      overlay.addEventListener(eventType, preventEvent, { capture: true, passive: false });
-    });
+      events.forEach(eventType => {
+        overlay.addEventListener(eventType, preventEvent, { capture: true, passive: false });
+      });
+    }
 
     document.body.appendChild(overlay);
+  }
+
+  private handleCancelRequest(): void {
+    // Cancel the current API request
+    if (this.currentAbortController) {
+      this.currentAbortController.abort();
+      this.currentAbortController = null;
+    }
+
+    // Hide the loading overlay
+    this.hideLoadingOverlay();
   }
 
   private hideLoadingOverlay(): void {
@@ -1285,6 +1347,12 @@ class ContentScript {
     if (this.observer) {
       this.observer.disconnect();
       this.observer = null;
+    }
+
+    // Cancel any ongoing API requests
+    if (this.currentAbortController) {
+      this.currentAbortController.abort();
+      this.currentAbortController = null;
     }
 
     // Clean up any existing popups

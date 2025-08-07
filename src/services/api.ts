@@ -37,7 +37,8 @@ export class ApiService {
 
   private async makeRequest<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    signal?: AbortSignal
   ): Promise<ApiResponse<T>> {
     const url = `${API_BASE_URL}${endpoint}`;
     const headers: Record<string, string> = {
@@ -52,6 +53,7 @@ export class ApiService {
       const response = await fetch(url, {
         ...options,
         headers: { ...headers, ...options.headers },
+        signal,
       });
 
       const data = await response.json();
@@ -70,6 +72,14 @@ export class ApiService {
         data,
       };
     } catch (error) {
+      // Check if the error is due to abort
+      if (error instanceof Error && error.name === 'AbortError') {
+        return {
+          success: false,
+          error: 'Request cancelled',
+        };
+      }
+
       // Use ErrorHandler for consistent error messages
       const errorMessage = ErrorHandler.getErrorMessage(error, 'API request');
       return {
@@ -154,11 +164,11 @@ export class ApiService {
     return this.makeRequest<PlayerData>(`/players/data/${encodeURIComponent(playerName)}/?scoring_type=${scoringType}`);
   }
 
-  async pickAssistant(request: PickAssistantRequest): Promise<ApiResponse<PickAssistantResponse>> {
+  async pickAssistant(request: PickAssistantRequest, signal?: AbortSignal): Promise<ApiResponse<PickAssistantResponse>> {
     return this.makeRequest<PickAssistantResponse>('/players/pick-assistant/', {
       method: 'POST',
       body: JSON.stringify(request),
-    });
+    }, signal);
   }
 
   // User profile methods

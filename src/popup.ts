@@ -99,6 +99,12 @@ class PopupManager {
     if (retryBtn) {
       retryBtn.addEventListener('click', () => this.initialize());
     }
+
+    // Scoring type dropdown
+    const scoringTypeSelect = document.getElementById('scoringTypeSelect') as HTMLSelectElement;
+    if (scoringTypeSelect) {
+      scoringTypeSelect.addEventListener('change', (e) => this.handleScoringTypeChange(e));
+    }
   }
 
   private async handleLogin(e: Event): Promise<void> {
@@ -257,6 +263,21 @@ class PopupManager {
 
   private showDashboard(): void {
     this.showScreen('dashboard');
+    this.loadScoringType();
+  }
+
+  private async loadScoringType(): Promise<void> {
+    const scoringType = await this.storageService.getScoringType();
+    const scoringTypeSelect = document.getElementById('scoringTypeSelect') as HTMLSelectElement;
+    if (scoringTypeSelect) {
+      scoringTypeSelect.value = scoringType;
+    }
+  }
+
+  private async handleScoringTypeChange(e: Event): Promise<void> {
+    const target = e.target as HTMLSelectElement;
+    const newScoringType = target.value;
+    await this.storageService.setScoringType(newScoringType);
   }
 
   private showError(message: string): void {

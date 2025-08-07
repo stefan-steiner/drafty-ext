@@ -61,4 +61,5 @@ export const STORAGE_KEYS = {
   AUTH_TOKEN: 'auth_token',
   USER_DATA: 'user_data',
   TEAM_NAME: 'team_name',
+  SCORING_TYPE: 'scoring_type',
 } as const;

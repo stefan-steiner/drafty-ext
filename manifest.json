@@ -11,9 +11,6 @@
     "https://football.fantasysports.yahoo.com/*",
     "https://sleeper.com/*"
   ],
-  "background": {
-    "service_worker": "background.js"
-  },
   "content_scripts": [
     {
       "matches": [

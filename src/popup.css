@@ -14,7 +14,7 @@ body {
 }
 
 #app {
-    width: 320px;
+    width: 300px;
     min-height: 200px;
     background: white;
     border-radius: 8px;
@@ -32,6 +32,21 @@ body {
 
 .screen.hidden {
     display: none;
+}
+
+/* Loading screen specific styles */
+#loading.screen {
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+#loading p {
+    font-size: 18px;
+    font-weight: 600;
+    color: #00008B;
+    margin-top: 16px;
+    font-family: 'Inter', system-ui, sans-serif;
 }
 
 /* Dashboard specific styles */
@@ -173,13 +188,13 @@ body {
 
 /* Loading spinner */
 .spinner {
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
     border: 3px solid #e9ecef;
     border-top: 3px solid #00BFFF;
     border-radius: 50%;
     animation: spin 1s linear infinite;
-    margin: 0 auto 16px;
+    margin: 0 auto;
 }
 
 @keyframes spin {
@@ -191,14 +206,18 @@ body {
 .status {
     background: #f8f9fa;
     border-radius: 8px;
-    padding: 12px;
-    margin-bottom: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
 }
 
 .status-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+.status-item:not(:last-child) {
+    margin-bottom: 16px;
 }
 
 .status-label {
@@ -211,6 +230,28 @@ body {
     color: #28a745;
     font-weight: 600;
     font-family: 'Inter', system-ui, sans-serif;
+}
+
+.scoring-select {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 14px;
+    font-family: 'Inter', system-ui, sans-serif;
+    color: #333;
+    cursor: pointer;
+    min-width: 100px;
+}
+
+.scoring-select:focus {
+    outline: none;
+    border-color: #00BFFF;
+    box-shadow: 0 0 0 2px rgba(0, 191, 255, 0.2);
+}
+
+.scoring-select:hover {
+    border-color: #00BFFF;
 }
 
 .actions {

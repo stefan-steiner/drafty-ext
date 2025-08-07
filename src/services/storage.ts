@@ -94,4 +94,18 @@ export class StorageService {
   async clearTeamName(): Promise<void> {
     await this.remove(STORAGE_KEYS.TEAM_NAME);
   }
+
+  // Scoring type methods
+  async getScoringType(): Promise<string> {
+    const scoringType = await this.get<string>(STORAGE_KEYS.SCORING_TYPE);
+    return scoringType || 'standard';
+  }
+
+  async setScoringType(scoringType: string): Promise<void> {
+    await this.set(STORAGE_KEYS.SCORING_TYPE, scoringType);
+  }
+
+  async clearScoringType(): Promise<void> {
+    await this.remove(STORAGE_KEYS.SCORING_TYPE);
+  }
 }
