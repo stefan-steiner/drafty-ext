@@ -247,7 +247,7 @@ export class SleeperParser extends BaseParser {
     return playerNames;
   }
 
-  private async ensureCorrectPlayerView(): Promise<void> {
+  async ensureCorrectPlayerView(teamName?: string): Promise<void> {
     const draftRankings = document.querySelector<HTMLElement>('.draft-rankings');
     if (!draftRankings) {
       return;
@@ -280,16 +280,13 @@ export class SleeperParser extends BaseParser {
   }
 
   async getAvailableNames(requiredCount: number): Promise<string[]> {
-    // Step 1: Ensure correct view is selected
-    await this.ensureCorrectPlayerView();
-
-    // Step 2: Scroll to top
+    // Step 1: Scroll to top
     await this.scrollToTop();
 
-    // Step 3: Small delay for DOM update
+    // Step 2: Small delay for DOM update
     await new Promise(resolve => setTimeout(resolve, 300));
 
-    // Step 4: Loop while collecting players
+    // Step 3: Loop while collecting players
     const playerNames: string[] = [];
     let attempts = 0;
     const maxAttempts = 100; // Prevent infinite loops
@@ -317,10 +314,10 @@ export class SleeperParser extends BaseParser {
       attempts++;
     }
 
-    // Step 5: Scroll back to top
+    // Step 4: Scroll back to top
     await this.scrollToTop();
 
-    // Step 6: Return exactly the first requiredCount players
+    // Step 5: Return exactly the first requiredCount players
     const finalNames = playerNames.slice(0, requiredCount);
     return finalNames;
   }
@@ -410,5 +407,11 @@ export class SleeperParser extends BaseParser {
 
   usesDraftAbbreviations(): boolean {
     return false;
+  }
+
+  getTeamName(): Promise<string | null> {
+    // TODO: Implement Sleeper team name detection
+    // This would need to find the team selector dropdown on Sleeper's draft page
+    return Promise.resolve(null);
   }
 }

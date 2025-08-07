@@ -94,7 +94,7 @@ export class YahooParser extends BaseParser {
     return url.startsWith('https://football.fantasysports.yahoo.com/draftclient/');
   }
 
-  async ensureCorrectPlayerView(): Promise<void> {
+  async ensureCorrectPlayerView(teamName?: string): Promise<void> {
     // Click the Players tab
     const playersTab = document.querySelector<HTMLButtonElement>('button[data-id="players"]');
     if (playersTab && !playersTab.getAttribute('aria-selected')) {
@@ -220,9 +220,6 @@ export class YahooParser extends BaseParser {
   }
 
   async getAvailableNames(requiredCount: number): Promise<string[]> {
-    // Ensure the correct player view is selected
-    await this.ensureCorrectPlayerView();
-
     // Step 1: Check if the table is scrollable
     const table = this.findPlayerListingTable();
     if (!table) {
@@ -446,5 +443,11 @@ export class YahooParser extends BaseParser {
 
   usesDraftAbbreviations(): boolean {
     return true;
+  }
+
+  getTeamName(): Promise<string | null> {
+    // TODO: Implement Yahoo team name detection
+    // This would need to find the team selector dropdown on Yahoo's draft page
+    return Promise.resolve(null);
   }
 }

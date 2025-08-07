@@ -24,6 +24,7 @@ class ContentScript {
     if (this.isInitialized) return;
 
     await this.initializeAuth();
+    await this.detectAndStoreTeamName();
     this.setupObserver();
     this.setupStorageListener();
     this.addButtonsToAllRows();
@@ -37,6 +38,27 @@ class ContentScript {
     if (token) {
       this.apiService.setAuthToken(token);
     }
+  }
+
+  private async detectAndStoreTeamName(): Promise<void> {
+    const currentUrl = window.location.href;
+    const parser = this.parserManager.getParserForUrl(currentUrl);
+
+    if (!parser) {
+      return; // Not a supported site
+    }
+
+    // Try to get team name from the parser (with built-in waiting)
+    const teamName = await parser.getTeamName();
+
+    if (teamName) {
+      await this.storageService.setTeamName(teamName);
+      console.log(`Drafty detected team name: ${teamName}`);
+    }
+  }
+
+  async getCurrentTeamName(): Promise<string | null> {
+    return await this.storageService.getTeamName();
   }
 
   private setupStorageListener(): void {
@@ -886,6 +908,12 @@ class ContentScript {
         return;
       }
 
+      // Get team name from storage
+      const teamName = await this.storageService.getTeamName();
+
+      // Ensure correct player view is set up first
+      await parser.ensureCorrectPlayerView(teamName || undefined);
+
       const availableNames = await parser.getAvailableNames(25);
       const draftedNames = await parser.getDraftedNames();
 
@@ -896,6 +924,7 @@ class ContentScript {
         this.showError('No players found on this page');
         return;
       }
+      // TODO: REMOVE
       console.log('Available players:', availableNames);
       console.log('Drafted players:', draftedNames);
 

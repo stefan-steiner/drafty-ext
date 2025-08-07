@@ -49,13 +49,16 @@ export interface SiteParser {
   name: string;
   canParse(url: string): boolean;
   getPlayerRows(): PlayerRow[];
+  ensureCorrectPlayerView(teamName?: string): Promise<void>;
   getAvailableNames(requiredCount: number): Promise<string[]>;
   getDraftedNames(): Promise<string[] | DraftedPlayer[]>;
   usesDraftAbbreviations(): boolean;
+  getTeamName(): Promise<string | null>;
 }
 
 // Storage keys
 export const STORAGE_KEYS = {
   AUTH_TOKEN: 'auth_token',
   USER_DATA: 'user_data',
+  TEAM_NAME: 'team_name',
 } as const;

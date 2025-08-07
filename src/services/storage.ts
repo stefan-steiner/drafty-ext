@@ -81,4 +81,17 @@ export class StorageService {
   async clearUserData(): Promise<void> {
     await this.remove(STORAGE_KEYS.USER_DATA);
   }
+
+  // Team-specific methods
+  async getTeamName(): Promise<string | null> {
+    return this.get<string>(STORAGE_KEYS.TEAM_NAME);
+  }
+
+  async setTeamName(teamName: string): Promise<void> {
+    await this.set(STORAGE_KEYS.TEAM_NAME, teamName);
+  }
+
+  async clearTeamName(): Promise<void> {
+    await this.remove(STORAGE_KEYS.TEAM_NAME);
+  }
 }

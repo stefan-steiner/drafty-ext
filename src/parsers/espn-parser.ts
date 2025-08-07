@@ -268,16 +268,13 @@ export class ESPNParser extends BaseParser {
   }
 
   async getAvailableNames(requiredCount: number): Promise<string[]> {
-    // Step 1: Ensure correct tab and filters are set
-    await this.ensureCorrectPlayerView();
-
-    // Step 2: Scroll to top
+    // Step 1: Scroll to top
     await this.scrollToTop();
 
-    // Step 3: Small delay for DOM update
+    // Step 2: Small delay for DOM update
     await new Promise(resolve => setTimeout(resolve, 300));
 
-    // Step 4: Loop while collecting players
+    // Step 3: Loop while collecting players
     const playerNames: string[] = [];
     let attempts = 0;
     const maxAttempts = 100; // Prevent infinite loops
@@ -305,27 +302,44 @@ export class ESPNParser extends BaseParser {
       attempts++;
     }
 
-    // Step 5: Scroll back to top
+    // Step 4: Scroll back to top
     await this.scrollToTop();
 
-    // Step 6: Return exactly the first requiredCount players
+    // Step 5: Return exactly the first requiredCount players
     const finalNames = playerNames.slice(0, requiredCount);
     return finalNames;
   }
 
-  private async ensureCorrectPlayerView(): Promise<void> {
+  async ensureCorrectPlayerView(teamName?: string): Promise<void> {
+    // Select the user's team if provided
+    if (teamName) {
+      const rosterDropdown = document.querySelector<HTMLSelectElement>('.roster__dropdown .dropdown__select');
+      if (rosterDropdown) {
+        // Find the option that matches the team name
+        for (let i = 0; i < rosterDropdown.options.length; i++) {
+          const option = rosterDropdown.options[i];
+          if (option.textContent?.trim() === teamName) {
+            rosterDropdown.value = option.value;
+            rosterDropdown.dispatchEvent(new Event('change', { bubbles: true }));
+            await new Promise(resolve => setTimeout(resolve, 100));
+            break;
+          }
+        }
+      }
+    }
+
     // Click on Players tab
     const playersTab = document.querySelector<HTMLElement>('.draft_tabs_container .tabs__list__item button[role="tab"]');
     if (playersTab && playersTab.textContent?.trim() === 'Players') {
       playersTab.click();
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
 
     // Ensure Show Drafted toggle is off
     const showDraftedToggle = document.querySelector<HTMLInputElement>('.drafted-players-toggle-container input[type="checkbox"]');
     if (showDraftedToggle && showDraftedToggle.checked) {
       showDraftedToggle.click();
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
 
     // Clear any player search
@@ -337,11 +351,9 @@ export class ESPNParser extends BaseParser {
 
     // Set filters to correct values
     const filtersContainer = document.querySelector<HTMLElement>('.draft-players .filters');
-    console.log(filtersContainer);
     if (filtersContainer) {
       // Find all dropdown select elements within filters (up to 2 levels deep)
       const dropdowns = filtersContainer.querySelectorAll<HTMLSelectElement>('.dropdown select.dropdown__select:not([aria-hidden])');
-      console.log(dropdowns);
 
       // Set to "2025 Projected" (first dropdown)
       if (dropdowns.length >= 1) {
@@ -364,6 +376,32 @@ export class ESPNParser extends BaseParser {
       // Single delay for all filter changes to process
       await new Promise(resolve => setTimeout(resolve, 200));
     }
+
+    // Sort by rank
+    const sorters = document.querySelectorAll<HTMLElement>('.draft-players .sorter');
+    const rkSorter = Array.from(sorters).find(sorter => sorter.textContent?.trim() === 'RK');
+    if (rkSorter) {
+      // Click the sorter until we see the up arrow icon
+      let attempts = 0;
+      const maxAttempts = 3; // Prevent infinite loops
+
+      while (attempts < maxAttempts) {
+        // Check if we already have the up arrow icon by looking at the SVG content
+        const svgElement = rkSorter.querySelector('svg use');
+        const hasUpArrow = svgElement && svgElement.getAttribute('xlink:href') === '#icon__caret__up';
+
+        if (hasUpArrow) {
+          break; // Already sorted correctly
+        }
+
+        // Click the sorter
+        rkSorter.click();
+        await new Promise(resolve => setTimeout(resolve, 200));
+
+        attempts++;
+      }
+    }
+
   }
 
   private findDraftedRosterSection(): HTMLElement | null {
@@ -524,5 +562,28 @@ export class ESPNParser extends BaseParser {
 
   usesDraftAbbreviations(): boolean {
     return false;
+  }
+
+  async getTeamName(): Promise<string | null> {
+    const maxAttempts = 50; // 5 seconds total (50 * 100ms)
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+      // Find the roster dropdown
+      const rosterDropdown = document.querySelector<HTMLSelectElement>('.roster__dropdown .dropdown__select');
+      if (rosterDropdown) {
+        // Get the selected option
+        const selectedOption = rosterDropdown.options[rosterDropdown.selectedIndex];
+        if (selectedOption && selectedOption.textContent?.trim()) {
+          return selectedOption.textContent.trim();
+        }
+      }
+
+      // Wait 100ms before next attempt
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
+    }
+
+    return null;
   }
 }
