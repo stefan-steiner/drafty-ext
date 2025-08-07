@@ -253,6 +253,48 @@ export class SleeperParser extends BaseParser {
       return;
     }
 
+    // Get the roster section (handles tab clicking if needed)
+    const rosterSection = await this.findDraftRosterSection();
+
+    // Select the user's team if provided
+    if (teamName && rosterSection) {
+      // Find the owner-selector element within the draft-roster2 section
+      const ownerSelector = rosterSection.querySelector<HTMLElement>('.owner-selector');
+      if (ownerSelector) {
+        // Check if the team is already selected
+        const nameContainer = ownerSelector.querySelector<HTMLElement>('.name-container');
+        const currentTeamName = nameContainer?.textContent?.trim();
+
+        // Only proceed if the team is not already selected
+        if (currentTeamName !== teamName) {
+          // Click on the selected-team to open the dropdown
+          const selectedTeam = ownerSelector.querySelector<HTMLElement>('.selected-team');
+          if (selectedTeam) {
+            selectedTeam.click();
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // Find the dropdown items container within the draft-roster2 section
+            const itemsContainer = rosterSection.querySelector<HTMLElement>('.owner-selector-items-container');
+            if (itemsContainer) {
+              // Find all owner-selector-item elements
+              const items = itemsContainer.querySelectorAll<HTMLElement>('.owner-selector-item');
+
+              // Find the item that matches the team name
+              for (const item of items) {
+                const itemText = item.textContent?.trim();
+                if (itemText === teamName) {
+                  // Click on the matching item
+                  item.click();
+                  await new Promise(resolve => setTimeout(resolve, 100));
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
     // Clear the player search
     const searchInput = draftRankings.querySelector<HTMLInputElement>('.header-controls .player-search input');
     if (searchInput && searchInput.value) {
@@ -275,8 +317,91 @@ export class SleeperParser extends BaseParser {
       }
     }
 
+    // Check for highlighted elements in the player table and unsort if needed
+    await this.unsortTableIfHighlighted();
+
     // Single delay for all UI updates to settle
     await new Promise(resolve => setTimeout(resolve, 300));
+  }
+
+  private async unsortTableIfHighlighted(): Promise<void> {
+    const draftRankings = document.querySelector<HTMLElement>('.draft-rankings');
+    if (!draftRankings) {
+      return;
+    }
+
+    // Find the player-rank-list container
+    const playerRankList = draftRankings.querySelector<HTMLElement>('.player-rank-list');
+    if (!playerRankList) {
+      return;
+    }
+
+    // Look for any elements with the "highlight" class
+    const highlightedElements = playerRankList.querySelectorAll<HTMLElement>('.highlight');
+
+    if (highlightedElements.length === 0) {
+      return; // No highlighted elements, table is not sorted
+    }
+
+    // Find the first highlighted element and check its classes
+    const firstHighlighted = highlightedElements[0];
+    const elementClasses = Array.from(firstHighlighted.classList);
+
+    // Define the mapping from highlighted element classes to sort column classes
+    const highlightedToSortColumnMap: Record<string, string> = {
+      'adp': 'adp',
+      'proj-pts': 'pts',
+      'proj-avg': 'avg',
+      'rush-att': 'rush-att',
+      'rush-yd': 'rush-yd',
+      'rush-td': 'rush-td',
+      'rec-tgt': 'rec-tar',
+      'rec-yd': 'rec-yd',
+      'rec-td': 'rec-td',
+      'pass-att': 'pass-att',
+      'pass-yd': 'pass-yd',
+      'pass-td': 'pass-td',
+    };
+
+    // Find which sort column is highlighted
+    let sortColumnClass: string | null = null;
+    for (const className of elementClasses) {
+      if (highlightedToSortColumnMap[className]) {
+        sortColumnClass = highlightedToSortColumnMap[className];
+        break;
+      }
+    }
+
+    if (!sortColumnClass) {
+      return; // No valid sort column found
+    }
+
+    // Find the header container
+    const bodyContainer = draftRankings.querySelector<HTMLElement>('.body-container');
+    if (!bodyContainer) {
+      return;
+    }
+
+    const header = bodyContainer.querySelector<HTMLElement>('.header');
+    if (!header) {
+      return;
+    }
+
+    // Find all rows in the header and get the second row
+    const headerRows = header.querySelectorAll<HTMLElement>('.row');
+    if (headerRows.length < 2) {
+      return; // Need at least 2 rows
+    }
+
+    const secondRow = headerRows[1]; // Get the second row (index 1)
+
+    // Find the corresponding header element with the same class in the second row
+    const headerElement = secondRow.querySelector<HTMLElement>(`.${sortColumnClass}`);
+    if (headerElement) {
+      // Click the header to unsort
+      headerElement.click();
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
   }
 
   async getAvailableNames(requiredCount: number): Promise<string[]> {
@@ -322,9 +447,9 @@ export class SleeperParser extends BaseParser {
     return finalNames;
   }
 
-  private findDraftRosterSection(): HTMLElement | null {
-    // First try to find the draft-roster2-teams directly
-    let rosterSection = document.querySelector<HTMLElement>('.draft-roster2-teams');
+  private async findDraftRosterSection(): Promise<HTMLElement | null> {
+    // First try to find the draft-roster2 directly
+    let rosterSection = document.querySelector<HTMLElement>('.draft-roster2');
 
     if (!rosterSection) {
       // If not found, look for the Roster tab and click it
@@ -335,9 +460,8 @@ export class SleeperParser extends BaseParser {
           if (tabButton) {
             tabButton.click();
             // Wait a bit for the content to load
-            setTimeout(() => {
-              rosterSection = document.querySelector<HTMLElement>('.draft-roster2-teams');
-            }, 500);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            rosterSection = document.querySelector<HTMLElement>('.draft-roster2');
             break;
           }
         }
@@ -347,19 +471,19 @@ export class SleeperParser extends BaseParser {
     return rosterSection;
   }
 
-  private findDraftedPlayerElements(): HTMLElement[] {
-    const rosterSection = this.findDraftRosterSection();
+  private async findDraftedPlayerElements(): Promise<HTMLElement[]> {
+    const rosterSection = await this.findDraftRosterSection();
     if (!rosterSection) {
       return [];
     }
 
-    // Find all player data elements (not empty ones)
+    // Find all player data elements (not empty ones) within the draft-roster2 section
     const playerElements = rosterSection.querySelectorAll<HTMLElement>('.player-data');
     return Array.from(playerElements);
   }
 
-  private getCurrentDraftedNames(): string[] {
-    const playerElements = this.findDraftedPlayerElements();
+  private async getCurrentDraftedNames(): Promise<string[]> {
+    const playerElements = await this.findDraftedPlayerElements();
     const draftedPlayers: string[] = [];
 
     for (const element of playerElements) {
@@ -376,32 +500,15 @@ export class SleeperParser extends BaseParser {
   }
 
   async getDraftedNames(): Promise<string[]> {
-    // Step 1: Check if roster section exists or needs to be accessed via tab
-    let rosterSection = this.findDraftRosterSection();
-
-    if (!rosterSection) {
-      // If not found, look for the Roster tab and click it
-      const tabElements = document.querySelectorAll<HTMLElement>('.round-tab .tab .text-wrapper');
-      for (const tabElement of tabElements) {
-        if (tabElement.textContent?.trim() === 'Roster') {
-          const tabButton = tabElement.closest('.round-tab') as HTMLElement;
-          if (tabButton) {
-            tabButton.click();
-            // Wait a bit for the content to load
-            await new Promise(resolve => setTimeout(resolve, 500));
-            rosterSection = document.querySelector<HTMLElement>('.draft-roster2-teams');
-            break;
-          }
-        }
-      }
-    }
+    // Step 1: Get the roster section (handles tab clicking if needed)
+    const rosterSection = await this.findDraftRosterSection();
 
     if (!rosterSection) {
       return [];
     }
 
     // Step 2: Collect all drafted players (no scrolling needed as mentioned)
-    const playerNames = this.getCurrentDraftedNames();
+    const playerNames = await this.getCurrentDraftedNames();
     return playerNames;
   }
 
@@ -409,9 +516,31 @@ export class SleeperParser extends BaseParser {
     return false;
   }
 
-  getTeamName(): Promise<string | null> {
-    // TODO: Implement Sleeper team name detection
-    // This would need to find the team selector dropdown on Sleeper's draft page
-    return Promise.resolve(null);
+  async getTeamName(): Promise<string | null> {
+    const maxAttempts = 50; // 5 seconds total (50 * 100ms)
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+      // Get the roster section (handles tab clicking if needed)
+      const rosterSection = await this.findDraftRosterSection();
+
+      if (rosterSection) {
+        // Find the owner-selector element within the draft-roster2 section
+        const ownerSelector = rosterSection.querySelector<HTMLElement>('.owner-selector');
+        if (ownerSelector) {
+          // Find the name-container div within the owner-selector
+          const nameContainer = ownerSelector.querySelector<HTMLElement>('.name-container');
+          if (nameContainer && nameContainer.textContent?.trim()) {
+            return nameContainer.textContent.trim();
+          }
+        }
+      }
+
+      // Wait 100ms before next attempt
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
+    }
+
+    return null;
   }
 }
